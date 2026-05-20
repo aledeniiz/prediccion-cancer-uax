@@ -1,84 +1,77 @@
-# Cancer Prediction Dashboard
+# Predicción de Diagnóstico de Cáncer
 
-Dashboard interactivo del caso de uso *"Predicción de Diagnóstico de Cáncer"*
-(UAX, Ingeniería Matemática, IA · 2025-2026).
+Caso de uso de Inteligencia Artificial aplicado al **cribado clínico**: un
+modelo que estima, a partir de datos clínicos de un paciente, la probabilidad
+de un diagnóstico de cáncer, para ayudar a decidir a quién conviene hacer
+pruebas adicionales.
 
-**Inferencia en vivo en el navegador.** Cero servidor. Cero build. Todo el
-modelo de Regresión Logística está embebido en JSON y se ejecuta con
-JavaScript puro — los resultados son **bit-idénticos** a los de sklearn
-(verificado a machine epsilon en el script `src/export_web.py`).
+Trabajo de **Ingeniería Matemática · Universidad Alfonso X el Sabio · 2025/26**.
 
-## Abrir en local
+## 🔗 Web del proyecto
 
-Opción 1 — doble clic en `index.html`. Funciona offline excepto los CDNs.
+**Dashboard interactivo:** https://aledeniiz.github.io/prediccion-cancer-uax/
 
-Opción 2 — servidor estático (recomendado para evitar restricciones de
-`fetch` en `file://`):
+**Diapositivas del caso de uso:** https://aledeniiz.github.io/prediccion-cancer-uax/slides.html
 
-```bash
-python -m http.server 8000
-# Abrir http://localhost:8000
-```
+No requiere instalar nada: se abre en el navegador desde cualquier dispositivo.
 
-## Verificación numérica
+## El problema
 
-Al cargar la página, abre DevTools (F12) → pestaña Console. Debe aparecer:
+Un modelo de cribado tiene que mantener un **equilibrio de costes**:
 
-```
-✓ JS inference verified: match sklearn within 0.001 (diff=X.XXe-XX, paciente id=NN)
-```
+- Si **detecta de más**, se hacen pruebas y biopsias costosas a personas
+  sanas — gasto sanitario en vano.
+- Si **detecta de menos**, hay cánceres que pasan desapercibidos y avanzan;
+  el tratamiento en fase avanzada es mucho más caro y de peor pronóstico.
 
-Si no aparece, hay bug en el orden del vector de features o en el
-preprocesado — revisar `predictLogReg()` en `index.html`.
+El objetivo no es solo "acertar", sino elegir el modelo y el punto de
+decisión que minimicen el coste total de ambos errores.
 
-## Deploy en GitHub Pages
+## Qué puedes ver en el dashboard
 
-Este repositorio ya está inicializado y con un commit hecho. Para publicarlo:
+- **Comparación de modelos** — regresión logística, Random Forest, XGBoost,
+  LightGBM y una red neuronal, evaluados sobre un conjunto de test con
+  intervalos de confianza.
+- **Simulador de pacientes** — la predicción del modelo se calcula en vivo en
+  el navegador, sin servidor.
+- **Interpretabilidad** — el peso de cada factor de riesgo en la decisión del
+  modelo (marcadores genéticos, hábitos, etc.).
+- **Punto de operación clínico** — cómo cambia el resultado al ajustar el
+  umbral de decisión.
 
-1. Crear un repo **público y vacío** en GitHub (sin README ni .gitignore),
-   por ejemplo `prediccion-cancer-uax`.
-2. Desde esta carpeta:
-   ```bash
-   git remote add origin https://github.com/<usuario>/prediccion-cancer-uax.git
-   git push -u origin main
-   ```
-3. En el repo: Settings → Pages → Source: `main` branch / `/ (root)` → Save.
-4. URL: `https://<usuario>.github.io/prediccion-cancer-uax/`
-   (tarda 1-2 min en estar disponible la primera vez).
+## Conclusión del trabajo
 
-El fichero `.nojekyll` desactiva el procesador Jekyll de GitHub Pages
-(necesario para servir cualquier path que empiece por `_`).
+Se recomienda la **Regresión Logística** con un **umbral de decisión de 0,38**:
+
+| Métrica | Valor |
+|---|---|
+| Sensibilidad | 86,5 % (1.252 de 1.447 cánceres detectados) |
+| Modelo | 39 coeficientes interpretables, auditable, sin caja negra |
+| Rendimiento | estadísticamente equivalente a XGBoost, pero más simple |
+
+Rinde igual que los modelos más complejos pero es transparente: un comité
+clínico puede leer y revisar cada coeficiente. Al estar validado sobre datos
+sintéticos, un uso real exigiría reentrenar con población verdadera y
+monitorizar la deriva del modelo.
+
+## Cómo funciona la web
+
+Una sola página HTML, sin servidor ni build. El modelo de regresión logística
+(pesos, escalado y umbrales) está embebido en ficheros JSON y la inferencia se
+ejecuta con JavaScript puro — los resultados son idénticos a los de la
+librería scikit-learn usada en el entrenamiento.
+
+Stack: HTML5 + Tailwind CSS + Chart.js + Alpine.js (todo por CDN).
 
 ## Estructura
 
 ```
 .
-├── index.html                    # todo en uno: HTML + CSS + JS
-├── slides.html                   # diapositivas del caso de uso
-├── .nojekyll                     # GitHub Pages: skip Jekyll
-├── README.md                     # este fichero
-└── data/
-    ├── logreg_model.json         # pesos LogReg + scaler + schemas + thresholds
-    ├── test_predictions.json     # 7501 pacientes × 5 probas (837 KB)
-    ├── roc_curves.json           # ROC + PR de los 5 modelos
-    ├── coefficients_table.json   # 39 coefs ordenados
-    └── test_features_sample.json # 50 pacientes reales para el simulador
+├── index.html      # dashboard interactivo (HTML + CSS + JS en un archivo)
+├── slides.html     # diapositivas del caso de uso
+└── data/           # modelo y resultados embebidos (JSON)
 ```
 
-## Stack
+## Autor
 
-HTML5 + Tailwind CSS (CDN) + Chart.js 4 (CDN) + Alpine.js 3 (CDN).
-Sin build step. Sin npm. Sin framework JS. Sin servidor.
-
-## Métricas que muestra el dashboard (test, n=7.501)
-
-| Modelo | t* | F1 | AUC-ROC |
-|---|---|---|---|
-| LogReg | 0,63 | 0,577 | 0,846 |
-| XGBoost | 0,60 | 0,578 | 0,847 |
-| RandomForest | 0,55 | 0,571 | 0,843 |
-| LightGBM | 0,58 | 0,566 | 0,840 |
-| MLP | 0,60 | 0,552 | 0,821 |
-
-Modelo recomendado: **LogReg en punto operativo clínico** (t=0,38) →
-sensibilidad 86,5 %, 2,74 biopsias por cáncer detectado.
+Alejandro Déniz Solana — Grado en Ingeniería Matemática, UAX.
