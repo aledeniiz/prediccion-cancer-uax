@@ -11,8 +11,6 @@ Trabajo de **Ingeniería Matemática · Universidad Alfonso X el Sabio · 2025/2
 
 **Dashboard interactivo:** https://aledeniiz.github.io/prediccion-cancer-uax/
 
-**Diapositivas del caso de uso:** https://aledeniiz.github.io/prediccion-cancer-uax/slides.html
-
 No requiere instalar nada: se abre en el navegador desde cualquier dispositivo.
 
 ## El problema
@@ -68,7 +66,6 @@ Stack: HTML5 + Tailwind CSS + Chart.js + Alpine.js (todo por CDN).
 ```
 .
 ├── index.html      # dashboard interactivo (HTML + CSS + JS en un archivo)
-├── slides.html     # diapositivas del caso de uso
 └── data/           # modelo y resultados embebidos (JSON)
 ```
 
