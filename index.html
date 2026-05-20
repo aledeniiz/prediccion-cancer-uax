@@ -1,0 +1,2264 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#FAFAF7">
+<title>Predicción de Diagnóstico de Cáncer — UAX 2025/26</title>
+<meta name="description" content="Caso de uso de IA aplicada a oncología: comparación de 4 modelos clásicos y una Red Neuronal Multicapa sobre 50.001 pacientes. Inferencia en vivo en el navegador.">
+<meta property="og:title" content="Predicción de Diagnóstico de Cáncer — UAX 2025/26">
+<meta property="og:description" content="IA aplicada a oncología. Cinco modelos comparados, inferencia en vivo en navegador, sin servidor.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="og-preview.png">
+
+<link rel="icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='14' fill='%231E3A8A'/><circle cx='10' cy='12' r='1.6' fill='white'/><circle cx='16' cy='10' r='1.6' fill='white'/><circle cx='22' cy='12' r='1.6' fill='white'/><circle cx='10' cy='20' r='1.6' fill='white'/><circle cx='16' cy='22' r='1.6' fill='white'/><circle cx='22' cy='20' r='1.6' fill='white'/></svg>">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
+
+<style>
+:root{
+  --bg-primary:#FAFAF7; --bg-secondary:#FFFFFF; --bg-tertiary:#F4F4EF;
+  --text-primary:#0A0A0A; --text-secondary:#5C5C5C; --text-tertiary:#8C8C8C;
+  --accent:#1E3A8A; --accent-hover:#1E40AF; --accent-soft:#EFF2F9;
+  --alert:#9F1239;             /* sangre contenido en lugar de Bootstrap red */
+  --alert-soft:#FEF2F2;
+  --success:#15803D;
+  --warning:#C2410C;
+  --border:#E5E5E0; --border-strong:#D4D4CE;
+  --shadow-sm:0 1px 3px rgba(0,0,0,.04);
+  --shadow-md:0 8px 24px rgba(0,0,0,.06);
+  --shadow-lg:0 16px 48px rgba(0,0,0,.08);
+  --radius:8px; --radius-lg:12px;
+  --transition:cubic-bezier(0.22, 1, 0.36, 1);
+}
+*{ box-sizing:border-box; }
+html, body{ overflow-x:hidden; }
+html{ scroll-behavior:smooth; }
+body{
+  font-family:'Inter',system-ui,sans-serif;
+  background:var(--bg-primary); color:var(--text-primary);
+  -webkit-font-smoothing:antialiased; line-height:1.7;
+  font-size:16px;
+}
+.font-serif{ font-family:'Instrument Serif',Georgia,serif; font-weight:400; }
+.font-mono{ font-family:'JetBrains Mono',monospace; font-variant-numeric:tabular-nums; }
+.eyebrow{
+  font-size:12px; font-weight:600; letter-spacing:0.08em;
+  text-transform:uppercase; color:var(--text-tertiary);
+}
+.container-narrow{ max-width:1180px; margin:0 auto; padding:0 32px; }
+section{ padding:120px 0; }
+@media(max-width:768px){ section{ padding:80px 0; } }
+
+h1.hero{
+  font-family:'Instrument Serif',Georgia,serif; font-weight:400;
+  font-size:clamp(40px,5.5vw,68px); line-height:1.05; letter-spacing:-0.02em;
+}
+h2.section-title{
+  font-family:'Instrument Serif',Georgia,serif; font-weight:400;
+  font-size:clamp(32px,4vw,48px); line-height:1.1; letter-spacing:-0.01em;
+}
+h3{ font-weight:600; font-size:24px; line-height:1.3; }
+.text-sec{ color:var(--text-secondary); }
+.text-ter{ color:var(--text-tertiary); }
+
+/* Section header con numeral romano + icono */
+.section-header{ display:flex; align-items:center; gap:16px; margin-bottom:8px; }
+.section-roman{
+  font-family:'JetBrains Mono',monospace; font-weight:500; font-size:14px;
+  color:var(--text-tertiary); letter-spacing:0.12em;
+}
+.section-divider{
+  width:1px; height:24px; background:var(--border-strong);
+}
+.section-icon{ color:var(--accent); display:flex; align-items:center; }
+.section-icon svg{ width:22px; height:22px; stroke-width:1.5; }
+
+/* Botones */
+.btn-primary{
+  display:inline-flex; align-items:center; gap:8px;
+  background:var(--accent); color:#fff; padding:14px 28px;
+  border-radius:var(--radius); font-weight:600; font-size:15px;
+  transition:all 200ms var(--transition); border:none; cursor:pointer;
+}
+.btn-primary:hover{ background:var(--accent-hover); transform:translateY(-1px); box-shadow:var(--shadow-sm); }
+.btn-secondary{
+  display:inline-flex; align-items:center; gap:8px;
+  background:transparent; color:var(--text-primary);
+  padding:14px 28px; border-radius:var(--radius); font-weight:600; font-size:15px;
+  border:1px solid var(--border-strong); cursor:pointer;
+  transition:all 200ms var(--transition);
+}
+.btn-secondary:hover{ background:var(--bg-tertiary); }
+.btn-primary:focus-visible, .btn-secondary:focus-visible{
+  outline:2px solid var(--accent); outline-offset:2px;
+}
+.btn-tour{
+  display:inline-flex; align-items:center; gap:6px;
+  background:var(--accent-soft); color:var(--accent);
+  padding:8px 16px; border-radius:6px; font-weight:600; font-size:13px;
+  border:none; cursor:pointer; transition:all 200ms;
+}
+.btn-tour:hover{ background:var(--accent); color:#fff; }
+
+/* Cards */
+.card{
+  background:var(--bg-secondary); border:1px solid var(--border);
+  border-radius:var(--radius-lg); padding:32px;
+  transition:all 200ms var(--transition);
+}
+.card-hover:hover{
+  transform:translateY(-2px); box-shadow:var(--shadow-sm); border-color:var(--border-strong);
+}
+
+/* Nav */
+nav.topnav{
+  position:fixed; top:0; left:0; right:0; z-index:50;
+  padding:14px 32px; transition:all 300ms var(--transition);
+  backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+  background:rgba(250,250,247,0.6);
+}
+nav.topnav.scrolled{
+  background:rgba(250,250,247,0.95); border-bottom:1px solid var(--border);
+}
+nav.topnav a{ color:var(--text-secondary); font-size:14px; font-weight:500;
+  transition:color 150ms; }
+nav.topnav a:hover{ color:var(--text-primary); }
+nav .navlogo{ display:flex; align-items:center; gap:10px; font-weight:500; font-size:14px;}
+
+/* Fade in */
+.fade-in{ opacity:0; transform:translateY(20px); transition:opacity 600ms var(--transition), transform 600ms var(--transition); }
+.fade-in.visible{ opacity:1; transform:translateY(0); }
+
+/* KPIs */
+.kpi-num{
+  font-family:'JetBrains Mono',monospace;
+  font-weight:500; font-size:clamp(40px,5vw,64px);
+  line-height:1; letter-spacing:-0.02em;
+  font-variant-numeric:tabular-nums;
+}
+
+/* Hero bg */
+.hero-bg{
+  background:radial-gradient(ellipse 1200px 800px at 50% 30%, var(--bg-primary) 0%, #F5F5F0 100%);
+}
+
+/* Mosaico de prevalencia */
+.mosaic{ display:grid; grid-template-columns:repeat(10, 1fr); gap:4px; max-width:240px; }
+.mosaic-fig{ aspect-ratio:1; display:block; }
+.mosaic-fig svg{ width:100%; height:100%; }
+
+/* Tabs */
+.tabs-bar{
+  display:flex; gap:4px; border-bottom:1px solid var(--border);
+  position:relative; flex-wrap:wrap;
+}
+.tab-btn{
+  padding:14px 20px; font-weight:500; font-size:14px;
+  color:var(--text-tertiary); background:none; border:none; cursor:pointer;
+  transition:color 150ms; position:relative;
+}
+.tab-btn:hover{ color:var(--text-secondary); }
+.tab-btn.active{ color:var(--text-primary); }
+.tab-indicator{
+  position:absolute; bottom:-1px; height:2px; background:var(--accent);
+  transition:all 250ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Sliders */
+input[type=range]{ -webkit-appearance:none; appearance:none; width:100%;
+  height:6px; border-radius:3px; background:var(--bg-tertiary); outline:none;
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none; appearance:none;
+  width:22px; height:22px; border-radius:50%; background:var(--accent);
+  border:3px solid #fff; box-shadow:var(--shadow-sm); cursor:pointer;
+  transition:transform 150ms;
+}
+input[type=range]::-webkit-slider-thumb:hover{ transform:scale(1.1); }
+input[type=range]::-moz-range-thumb{
+  width:22px; height:22px; border-radius:50%; background:var(--accent);
+  border:3px solid #fff; cursor:pointer;
+}
+.thr-slider{ height:8px; }
+.thr-slider::-webkit-slider-thumb{ width:26px; height:26px; }
+
+/* Toggle iOS */
+.tg{
+  position:relative; display:inline-flex; width:46px; height:26px;
+  background:#D4D4CE; border-radius:13px; cursor:pointer;
+  transition:background 200ms; flex-shrink:0;
+}
+.tg input{ display:none; }
+.tg .knob{
+  position:absolute; top:3px; left:3px; width:20px; height:20px;
+  background:#fff; border-radius:50%; transition:left 200ms;
+  box-shadow:var(--shadow-sm);
+}
+.tg.on{ background:var(--accent); }
+.tg.on .knob{ left:23px; }
+
+/* Segmented */
+.seg{ display:inline-flex; background:var(--bg-tertiary); padding:3px;
+  border-radius:var(--radius); border:1px solid var(--border); }
+.seg button{ padding:8px 14px; font-size:13px; font-weight:500;
+  color:var(--text-secondary); background:none; border:none; cursor:pointer;
+  border-radius:6px; transition:all 200ms; }
+.seg button.active{ background:#fff; color:var(--text-primary); box-shadow:var(--shadow-sm); }
+
+/* Tables */
+table.data{ width:100%; border-collapse:collapse; }
+table.data th{
+  text-align:left; padding:14px 16px; font-size:12px; font-weight:600;
+  color:var(--text-tertiary); text-transform:uppercase; letter-spacing:0.05em;
+  border-bottom:1px solid var(--border);
+}
+table.data td{
+  padding:16px; font-size:14px; border-bottom:1px solid var(--border);
+  transition:background 150ms;
+}
+table.data tr:hover td{ background:var(--accent-soft); }
+table.data tr.highlight td{ background:var(--accent-soft); }
+
+/* Coef bars */
+.coef-bar{ display:flex; align-items:center; gap:12px; }
+.coef-bar .barwrap{ flex:1; height:8px; background:var(--bg-tertiary);
+  border-radius:4px; overflow:hidden; }
+.coef-bar .bar{ height:100%; border-radius:4px; transition:width 800ms cubic-bezier(0.22, 1, 0.36, 1); }
+.coef-bar .bar.pos{ background:var(--alert); }
+.coef-bar .bar.neg{ background:var(--accent); }
+
+/* Confusion matrix */
+.cm-grid{ display:grid; grid-template-columns:1fr 1fr; gap:8px; max-width:520px; margin:0 auto; }
+.cm-cell{ padding:24px; border-radius:8px; border-left:3px solid; min-height:120px; }
+.cm-cell .num{ font-family:'JetBrains Mono',monospace; font-weight:500;
+  font-size:36px; line-height:1; font-variant-numeric:tabular-nums; }
+.cm-cell .lbl{ font-size:11px; font-weight:600; text-transform:uppercase;
+  letter-spacing:0.05em; color:var(--text-tertiary); margin-top:6px;}
+.cm-cell .desc{ font-size:12px; color:var(--text-secondary); margin-top:8px; }
+.cm-tn{ background:#F0FDF4; border-color:var(--success); }
+.cm-fp{ background:#FEF3C7; border-color:var(--warning); }
+.cm-fn{ background:var(--alert-soft); border-color:var(--alert); }
+.cm-tp{ background:var(--accent-soft); border-color:var(--accent); }
+
+/* Patient impact card */
+.impact-row{ display:flex; gap:16px; align-items:flex-start; padding:18px; border-radius:8px; border-left:3px solid; }
+.impact-row .iconwrap{ flex-shrink:0; width:40px; height:40px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center; }
+.impact-row .iconwrap svg{ width:22px; height:22px; stroke-width:2; }
+.impact-row .num{ font-family:'JetBrains Mono',monospace; font-weight:500;
+  font-size:28px; line-height:1; font-variant-numeric:tabular-nums; }
+.impact-row .lbl{ font-size:13px; color:var(--text-primary); margin-top:4px; line-height:1.4; }
+.impact-row .desc{ font-size:11px; color:var(--text-tertiary); margin-top:4px; }
+.impact-tp{ background:#F0FDF4; border-color:var(--success); }
+.impact-tp .iconwrap{ background:#DCFCE7; color:var(--success); }
+.impact-fn{ background:var(--alert-soft); border-color:var(--alert); }
+.impact-fn .iconwrap{ background:#FECDD3; color:var(--alert); }
+.impact-fp{ background:#FEF3C7; border-color:var(--warning); }
+.impact-fp .iconwrap{ background:#FDE68A; color:var(--warning); }
+
+/* Factors active panel */
+.factor-line{
+  display:flex; justify-content:space-between; align-items:center;
+  padding:6px 0; font-size:13px;
+}
+.factor-line .lbl{ color:var(--text-secondary); }
+.factor-line .val{ font-family:'JetBrains Mono',monospace; font-size:12px; }
+.factor-line .val.pos{ color:var(--alert); }
+.factor-line .val.neg{ color:var(--accent); }
+
+/* Gauge animation */
+.gauge-arc{ transition:stroke-dasharray 400ms ease-in-out, stroke 400ms ease-in-out; }
+.diag-banner{ transition:all 400ms ease-out; }
+.bg-trans{ transition:background-color 200ms; }
+.scroll-hide::-webkit-scrollbar{ display:none; }
+.scroll-hide{ -ms-overflow-style:none; scrollbar-width:none; }
+[x-cloak]{ display:none !important; }
+
+/* Tour overlay */
+.tour-backdrop{
+  position:fixed; inset:0; background:rgba(10,10,10,0.55); z-index:100;
+  display:flex; align-items:center; justify-content:center; padding:24px;
+  backdrop-filter:blur(4px); animation:fadein 200ms;
+}
+@keyframes fadein{ from{opacity:0} to{opacity:1} }
+.tour-card{
+  background:var(--bg-secondary); border-radius:var(--radius-lg);
+  box-shadow:var(--shadow-lg); padding:36px; max-width:520px;
+  width:100%; animation:popin 250ms var(--transition);
+}
+@keyframes popin{ from{opacity:0; transform:translateY(8px) scale(0.98)} to{opacity:1; transform:translateY(0) scale(1)} }
+.tour-card .eyebrow{ color:var(--accent); }
+.tour-card h3{ font-family:'Instrument Serif',Georgia,serif; font-weight:400;
+  font-size:28px; margin-top:8px; line-height:1.2; }
+.tour-card p{ font-size:15px; color:var(--text-secondary); margin-top:14px; line-height:1.6; }
+.tour-progress{ display:flex; gap:6px; margin-top:24px; }
+.tour-progress span{ flex:1; height:3px; background:var(--bg-tertiary); border-radius:2px; }
+.tour-progress span.done{ background:var(--accent); }
+
+/* Citation */
+.cite{ font-style:italic; font-size:12px; color:var(--text-tertiary); border-left:2px solid var(--border-strong); padding-left:10px; }
+
+/* ===== V3 ADDITIONS ===== */
+
+/* Hero blob orgánico (decorativo) */
+.hero-blob{
+  position:absolute; z-index:-1; width:560px; height:560px;
+  right:-80px; top:60px; pointer-events:none;
+  opacity:0.45;
+  animation:blob-float 22s ease-in-out infinite alternate;
+}
+@keyframes blob-float{
+  0%   { transform:rotate(0deg) scale(1); }
+  100% { transform:rotate(8deg) scale(1.06); }
+}
+
+/* Línea decorativa editorial bajo h1 */
+.hero-decor-line{ display:block; margin-top:24px; }
+.hero-decor-line path{
+  stroke-dasharray:200; stroke-dashoffset:200;
+  animation:dash-in 1200ms ease-out 600ms forwards;
+}
+@keyframes dash-in{ to{ stroke-dashoffset:0; } }
+
+/* Mosaico animado */
+.mosaic{ display:grid; grid-template-columns:repeat(10, 1fr); gap:4px; max-width:240px; }
+.mosaic-fig{ aspect-ratio:1; display:block; opacity:0; transform:scale(0.5);
+  transition:opacity 250ms ease-out, transform 250ms ease-out;
+  cursor:pointer;
+}
+.mosaic-fig.in{ opacity:1; transform:scale(1); }
+.mosaic-fig:hover{ transform:scale(1.5); }
+.mosaic-fig svg{ width:100%; height:100%; transition:fill 220ms ease-out; }
+@keyframes mosaic-pulse{
+  0%   { transform:scale(1); }
+  40%  { transform:scale(1.4); }
+  100% { transform:scale(1); }
+}
+.mosaic-fig.cancer-flip{ animation:mosaic-pulse 320ms ease-out; }
+
+.mosaic-replay{
+  display:inline-flex; align-items:center; gap:6px;
+  font-family:'JetBrains Mono',monospace; font-size:11px;
+  color:var(--text-tertiary); background:none; border:none; cursor:pointer;
+  margin-top:8px; padding:0;
+}
+.mosaic-replay:hover{ color:var(--accent); }
+
+.mosaic-status{ font-size:12px; color:var(--text-secondary); margin-top:8px;
+  min-height:18px; transition:opacity 200ms; }
+
+/* Full bleed dark section */
+.section-dark{
+  background:#0F172A; color:#F8FAFC;
+  width:100vw; margin-left:calc(-50vw + 50%);
+  padding:140px 32px;
+}
+.section-dark .container-narrow{ padding:0; }
+.section-dark .eyebrow{ color:#94A3B8; }
+.section-dark h2{
+  font-family:'Instrument Serif',Georgia,serif; font-weight:400;
+  font-size:clamp(34px,5vw,56px); line-height:1.1; color:#F8FAFC;
+}
+.section-dark .sub-italic{
+  font-family:'Instrument Serif',Georgia,serif; font-style:italic;
+  font-size:21px; color:#CBD5E1; line-height:1.55;
+}
+.section-dark .stat-num{
+  font-family:'JetBrains Mono',monospace; font-weight:500;
+  font-size:clamp(44px,5vw,64px); color:#F8FAFC; line-height:1;
+  font-variant-numeric:tabular-nums;
+}
+.section-dark .stat-lbl{
+  font-size:13px; color:#94A3B8; line-height:1.5; margin-top:12px;
+}
+.section-dark .divider-soft{
+  width:80px; height:1px; background:#334155; margin:48px auto;
+}
+.section-dark .cite-end{
+  font-style:italic; font-size:13px; color:#94A3B8;
+  font-family:'Instrument Serif',Georgia,serif; font-size:18px;
+}
+
+/* Pulse ambient en el gauge */
+@keyframes gauge-pulse{
+  0%, 100% { transform:scale(1); }
+  50%      { transform:scale(1.015); }
+}
+#gauge-container.pulse{ animation:gauge-pulse 1200ms ease-in-out infinite; }
+
+/* Tip ciclante */
+.sim-tip{
+  display:flex; align-items:flex-start; gap:8px;
+  font-size:12px; color:var(--text-secondary); font-style:italic;
+  line-height:1.5; padding:10px 12px; border-radius:8px;
+  background:var(--bg-tertiary); margin-top:14px;
+  transition:opacity 250ms;
+}
+.sim-tip svg{ flex-shrink:0; width:14px; height:14px; color:var(--accent); margin-top:2px; }
+.sim-tip.fade{ opacity:0; }
+
+/* Reflexión final */
+.reflection-card{
+  background:var(--accent-soft); border-radius:16px;
+  border-left:4px solid var(--accent);
+  padding:56px; margin-top:48px;
+}
+.reflection-card p{ font-size:17px; line-height:1.75; color:var(--text-primary);
+  margin-bottom:18px; }
+.reflection-card .signature{
+  font-size:14px; font-weight:500; color:var(--text-secondary);
+  margin-top:32px;
+}
+
+/* Timeline horizontal §II */
+.timeline-row{
+  display:flex; gap:24px; overflow-x:auto;
+  scroll-snap-type:x mandatory; scroll-padding:32px;
+  padding:8px 0 24px;
+}
+.timeline-card{
+  flex:0 0 320px; scroll-snap-align:start;
+  background:var(--bg-secondary); border:1px solid var(--border);
+  border-radius:12px; padding:28px;
+  transition:transform 250ms var(--transition), box-shadow 250ms,
+             border-color 250ms;
+  position:relative;
+}
+.timeline-card:hover{
+  transform:translateY(-4px); box-shadow:var(--shadow-md);
+  border-color:var(--accent);
+}
+.timeline-card .roman{
+  font-family:'JetBrains Mono',monospace; font-weight:500;
+  font-size:13px; color:var(--text-tertiary); letter-spacing:0.12em;
+}
+.timeline-card .arrow{
+  position:absolute; top:18px; right:18px;
+  color:var(--text-tertiary); opacity:0;
+  transition:opacity 200ms, transform 200ms;
+}
+.timeline-card:hover .arrow{ opacity:1; transform:translateX(2px); }
+.timeline-progress{
+  height:3px; background:var(--bg-tertiary); border-radius:2px;
+  max-width:200px; margin:0 auto; overflow:hidden;
+}
+.timeline-progress-bar{
+  height:100%; background:var(--accent); width:0%;
+  transition:width 100ms linear;
+}
+
+/* Mosaico reactivo §IV */
+.mini-mosaic{
+  display:grid; grid-template-columns:repeat(20, 1fr); gap:3px;
+  max-width:660px; margin:24px auto 0;
+}
+.mini-cell{
+  aspect-ratio:1; border-radius:2px; border:1px solid;
+  transition:background 220ms ease-out, border-color 220ms ease-out, transform 200ms;
+  cursor:default;
+}
+.mini-cell:hover{ transform:scale(1.5); z-index:2; position:relative; }
+.cm-legend{ display:flex; flex-wrap:wrap; gap:18px; justify-content:center;
+  margin-top:20px; font-size:12px; color:var(--text-secondary); }
+.cm-legend-swatch{
+  display:inline-block; width:14px; height:14px; border-radius:3px;
+  border:1px solid; vertical-align:-2px; margin-right:6px;
+}
+
+/* Manifiesto pregunta-respuesta */
+.manifesto{
+  text-align:center; padding:80px 32px;
+}
+.manifesto .question{
+  font-family:'Instrument Serif',Georgia,serif; font-style:italic;
+  font-size:clamp(28px,4vw,52px); line-height:1.15;
+  color:var(--text-primary); max-width:780px; margin:16px auto 0;
+}
+.manifesto .answer{
+  font-family:'Inter',sans-serif; font-weight:700;
+  font-size:clamp(48px,7vw,88px); line-height:1; letter-spacing:-0.025em;
+  color:var(--accent); margin-top:24px;
+}
+.manifesto .divider-vert{
+  width:1px; height:64px; background:var(--border-strong);
+  margin:48px auto;
+}
+.manifesto .downhint{
+  margin-top:32px; font-size:13px; color:var(--text-tertiary);
+  animation:downhint 1800ms ease-in-out infinite;
+}
+@keyframes downhint{
+  0%, 100%{ transform:translateY(0); }
+  50%     { transform:translateY(4px); }
+}
+
+/* Divisor decorativo entre secciones */
+.section-decor{ display:block; margin:0 auto 16px; width:80px; height:8px; }
+.section-decor path{
+  stroke:var(--accent); stroke-width:1; fill:none; opacity:0.4;
+  stroke-dasharray:100; stroke-dashoffset:100;
+  transition:stroke-dashoffset 800ms ease-out;
+}
+.section-decor.visible path{ stroke-dashoffset:0; }
+
+/* Respeta prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce){
+  *, *::before, *::after{ animation-duration:0.01ms !important; transition-duration:0.01ms !important; }
+  .mosaic-fig{ opacity:1; transform:none; }
+}
+</style>
+</head>
+<body>
+
+<!-- ============ NAV ============ -->
+<nav class="topnav" id="topnav">
+  <div class="container-narrow flex items-center justify-between">
+    <a href="#hero" class="navlogo">
+      <svg width="24" height="24" viewBox="0 0 32 32" aria-hidden="true">
+        <circle cx="16" cy="16" r="14" fill="#1E3A8A"/>
+        <circle cx="10" cy="12" r="1.6" fill="white"/>
+        <circle cx="16" cy="10" r="1.6" fill="white"/>
+        <circle cx="22" cy="12" r="1.6" fill="white"/>
+        <circle cx="10" cy="20" r="1.6" fill="white"/>
+        <circle cx="16" cy="22" r="1.6" fill="white"/>
+        <circle cx="22" cy="20" r="1.6" fill="white"/>
+      </svg>
+      <span>Cancer Prediction · UAX 25/26</span>
+    </a>
+    <div class="hidden md:flex items-center gap-6">
+      <button class="btn-tour" onclick="startTour()">▶ Tour guiado</button>
+      <a href="#problema">El problema</a>
+      <a href="#dilema">El dilema</a>
+      <a href="#metodologia">Metodología</a>
+      <a href="#simulador">Simulador</a>
+      <a href="#threshold">Umbral</a>
+      <a href="#comparativa">Comparativa</a>
+      <a href="#recomendacion">Recomendación</a>
+    </div>
+  </div>
+</nav>
+
+<main>
+
+<!-- ============ §I HERO ============ -->
+<section id="hero" class="hero-bg" style="min-height:100vh; padding-top:140px; padding-bottom:60px; display:flex; align-items:center;">
+  <div class="container-narrow w-full">
+    <div class="grid grid-cols-1 lg:grid-cols-11 gap-12 items-center">
+
+      <!-- IZQUIERDA 55% (6/11) -->
+      <div class="lg:col-span-6">
+        <div class="fade-in" style="transition-delay:0ms">
+          <div class="eyebrow mb-6">Caso de uso · Ingeniería Matemática · UAX 2025/26</div>
+        </div>
+        <h1 class="hero fade-in" style="transition-delay:120ms">Predicción de<br>Diagnóstico de Cáncer</h1>
+        <svg class="hero-decor-line" width="120" height="12" viewBox="0 0 120 12" aria-hidden="true">
+          <path d="M0 6 Q30 0 60 6 T120 6" stroke="#1E3A8A" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+        </svg>
+        <p class="font-serif italic text-sec mt-5 fade-in" style="font-size:21px; line-height:1.45; max-width:560px; transition-delay:240ms">
+          Un estudio de viabilidad comparando cuatro modelos clásicos de Machine Learning frente a una Red Neuronal Multicapa sobre <span class="font-mono not-italic" style="font-style:normal">50&thinsp;001</span> pacientes.
+        </p>
+        <p class="font-serif italic text-ter mt-5 fade-in cite" style="font-size:14px; line-height:1.5; max-width:540px; transition-delay:320ms">
+          El 19,3 % de los pacientes del estudio recibe diagnóstico de cáncer. El modelo intenta anticiparlo a partir de 30 variables clínicas.
+        </p>
+
+        <div class="mt-9 flex flex-wrap gap-4 fade-in" style="transition-delay:440ms">
+          <a href="#simulador" class="btn-primary">Probar el modelo →</a>
+          <button class="btn-secondary" onclick="document.getElementById('metodologia-toggle').click(); document.getElementById('metodologia').scrollIntoView({behavior:'smooth'});">Ver metodología</button>
+        </div>
+
+        <div class="mt-7 fade-in flex items-center gap-2 text-ter" style="font-size:12px; font-weight:500; transition-delay:560ms">
+          <span style="width:8px;height:8px;border-radius:50%;background:var(--success);display:inline-block"></span>
+          <span>Inferencia verificable en navegador · Sin servidor · Reproducible</span>
+        </div>
+      </div>
+
+      <!-- DERECHA 45% (5/11) — Mosaico prevalencia + cifras clínicas -->
+      <div class="lg:col-span-5 fade-in" style="transition-delay:640ms; position:relative">
+        <!-- Blob orgánico decorativo -->
+        <svg class="hero-blob" viewBox="0 0 400 400" aria-hidden="true">
+          <path d="M321.5 80.4C346 117 339 173 313 219c-26 46-71 81-122 96-51 16-108 11-145-18C9 267-7 211 4 161 16 110 53 65 100 39c46-26 102-19 145 0 36 16 60 25 76.5 41.4z"
+                fill="#EFF2F9"/>
+        </svg>
+        <div class="card" style="padding:32px; position:relative; z-index:1">
+          <div class="eyebrow mb-4">Prevalencia en el dataset</div>
+          <div class="flex items-start gap-6">
+            <div>
+              <div class="mosaic" id="mosaic-prev" aria-label="Mosaico de 100 pacientes, 19 con diagnóstico de cáncer"></div>
+              <button class="mosaic-replay" onclick="playMosaicAnimation()" aria-label="Reproducir animación">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15A9 9 0 1 0 6 5.3L1 10"/></svg>
+                Reproducir
+              </button>
+            </div>
+            <div class="flex-1">
+              <div id="mosaic-counter" class="font-serif" style="font-size:38px; line-height:1; color:var(--alert)">0</div>
+              <div id="mosaic-status" class="mosaic-status">Cargando estudio...</div>
+            </div>
+          </div>
+
+          <div class="my-6" style="height:1px; background:var(--border)"></div>
+
+          <div class="grid grid-cols-2 gap-6">
+            <div>
+              <div class="kpi-num" data-final="86.5" data-decimals="1" data-suffix="%" style="font-size:42px; color:var(--accent)">0.0%</div>
+              <div class="eyebrow mt-2" style="font-size:11px">Detectados por el modelo</div>
+            </div>
+            <div>
+              <div class="kpi-num" data-final="195" data-decimals="0" style="font-size:42px; color:var(--alert)">0</div>
+              <div class="eyebrow mt-2" style="font-size:11px">Cánceres no detectados<br>de 1.447 reales</div>
+            </div>
+          </div>
+        </div>
+
+        <p class="text-ter text-center mt-4" style="font-size:11px; line-height:1.5">
+          Para evaluación técnica: AUC-ROC <span class="font-mono">0,846</span> · F1 <span class="font-mono">0,577</span> · IC95% reportados ·<br>
+          inferencia verificada a <span class="font-mono">10⁻⁵</span> vs scikit-learn
+        </p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ============ §I "EL PROBLEMA" ============ -->
+<section id="problema">
+  <div class="container-narrow">
+    <div class="fade-in">
+      <div class="section-header">
+        <span class="section-roman">I</span>
+        <span class="section-divider"></span>
+        <span class="section-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2c-3 2-4 5-4 8 0 3 1 5 4 12 3-7 4-9 4-12 0-3-1-6-4-8z"/><circle cx="12" cy="9.5" r="1.8"/></svg>
+        </span>
+      </div>
+      <h2 class="section-title">El problema</h2>
+      <p class="font-serif italic text-sec mt-3" style="font-size:20px">Un cribado oncológico equilibra dos costes asimétricos.</p>
+    </div>
+
+    <div class="mt-12 grid grid-cols-1 lg:grid-cols-5 gap-6 items-stretch">
+
+      <!-- COLUMNA IZQUIERDA 40% (2/5) — Editorial gigante -->
+      <div class="lg:col-span-2 card" style="padding:48px; display:flex; flex-direction:column">
+        <div class="eyebrow">El cáncer en cifras</div>
+        <div class="font-serif" style="font-style:italic; font-size:clamp(64px, 8vw, 96px); line-height:0.95; color:var(--text-primary); margin-top:24px; letter-spacing:-0.02em">
+          19,29<span style="font-size:0.55em; vertical-align:0.25em"> %</span>
+        </div>
+        <div class="eyebrow mt-3" style="font-size:11px">Prevalencia en el estudio</div>
+
+        <div style="height:1px; width:60px; background:var(--border); margin:32px 0"></div>
+
+        <div class="space-y-4 flex-1">
+          <div>
+            <div class="font-mono" style="font-size:28px; line-height:1">9.644</div>
+            <div class="text-sec" style="font-size:13px; margin-top:2px">pacientes con cáncer <span class="text-ter">(50.001 totales)</span></div>
+          </div>
+          <div>
+            <div class="font-mono" style="font-size:28px; line-height:1">1.447</div>
+            <div class="text-sec" style="font-size:13px; margin-top:2px">casos en el conjunto de test</div>
+          </div>
+          <div>
+            <div class="font-mono" style="font-size:28px; line-height:1; color:var(--success)">+3×</div>
+            <div class="text-sec" style="font-size:13px; margin-top:2px">supervivencia a 5 años con detección precoz</div>
+          </div>
+        </div>
+
+        <p class="cite mt-6" style="font-family:'Instrument Serif',Georgia,serif; font-size:14px">
+          «La detección temprana es el factor pronóstico más determinante.»
+          <span class="block mt-1 text-ter" style="font-size:11px">— SEER 2024 · ACS Statistics</span>
+        </p>
+      </div>
+
+      <!-- COLUMNA DERECHA 60% (3/5) — Dos cards apiladas -->
+      <div class="lg:col-span-3 flex flex-col gap-6">
+
+        <!-- Coste FN -->
+        <div class="card card-hover" style="display:flex; gap:20px; padding:32px">
+          <div style="flex-shrink:0; width:56px; height:56px; border-radius:10px; background:var(--alert-soft); color:var(--alert); display:flex; align-items:center; justify-content:center">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M10.3 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+              <line x1="12" y1="9" x2="12" y2="13"/>
+              <circle cx="12" cy="17" r="0.5" fill="currentColor"/>
+            </svg>
+          </div>
+          <div class="flex-1">
+            <div class="eyebrow" style="color:var(--alert)">Falso negativo</div>
+            <h3 style="font-size:22px; font-weight:600; margin-top:6px">El error más caro</h3>
+            <p class="text-sec mt-2" style="font-size:15px; line-height:1.6">
+              Un cáncer no detectado progresa silenciosamente. Cuando se diagnostica tarde, el coste sanitario es <strong>4-8× mayor</strong> y la supervivencia a 5 años cae del <span class="font-mono">99 %</span> al <span class="font-mono">28 %</span>.
+            </p>
+          </div>
+        </div>
+
+        <!-- Coste FP -->
+        <div class="card card-hover" style="display:flex; gap:20px; padding:32px">
+          <div style="flex-shrink:0; width:56px; height:56px; border-radius:10px; background:#FEF3C7; color:var(--warning); display:flex; align-items:center; justify-content:center">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="7"/>
+              <line x1="16" y1="16" x2="21" y2="21"/>
+              <line x1="11" y1="8" x2="11" y2="11"/>
+              <circle cx="11" cy="14" r="0.5" fill="currentColor"/>
+            </svg>
+          </div>
+          <div class="flex-1">
+            <div class="eyebrow" style="color:var(--warning)">Falso positivo</div>
+            <h3 style="font-size:22px; font-weight:600; margin-top:6px">El error tolerable</h3>
+            <p class="text-sec mt-2" style="font-size:15px; line-height:1.6">
+              Una biopsia innecesaria cuesta <span class="font-mono">300-1.500 €</span> y genera estrés psicológico, pero raramente daño físico permanente. El sistema sanitario está diseñado para absorber este coste.
+            </p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="mt-10 rounded-lg text-center" style="background:var(--accent-soft); padding:24px">
+      <div style="font-size:16px; font-weight:500">El modelo no elimina los errores. Elige cuál minimizar.</div>
+      <div class="text-sec mt-1" style="font-size:14px">El umbral <span class="font-mono">t</span> define ese equilibrio.</div>
+      <a href="#simulador" class="inline-block mt-3" style="color:var(--accent); font-weight:500; font-size:13px">↓ Probar el simulador</a>
+    </div>
+  </div>
+</section>
+
+<!-- ============ EL DILEMA (full bleed dark) ============ -->
+<section id="dilema" class="section-dark">
+  <div class="container-narrow" style="max-width:820px; text-align:center">
+    <div class="eyebrow mb-6 fade-in">El dilema ético</div>
+    <h2 class="fade-in" style="transition-delay:80ms">
+      ¿Cuántas biopsias innecesarias<br>
+      vale una vida salvada?
+    </h2>
+    <p class="sub-italic mt-8 fade-in" style="transition-delay:160ms; max-width:720px; margin-left:auto; margin-right:auto">
+      En cribado oncológico no se busca el modelo más preciso. Se busca el umbral que mejor refleja los valores éticos del sistema sanitario. Este proyecto propone 0,38: priorizar detección sobre eficiencia.
+    </p>
+
+    <div class="divider-soft"></div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-12 mt-8 text-left fade-in" style="transition-delay:240ms; text-align:left">
+      <div>
+        <div class="stat-num">4,1</div>
+        <div class="stat-lbl">biopsias adicionales por cada cáncer extra detectado al bajar el umbral de 0,63 a 0,38</div>
+      </div>
+      <div>
+        <div class="stat-num">~600 €</div>
+        <div class="stat-lbl">coste medio de una biopsia diagnóstica en el SNS español <span style="opacity:0.7">(referencia hospitalaria 2023)</span></div>
+      </div>
+      <div>
+        <div class="stat-num">85 %</div>
+        <div class="stat-lbl">sensibilidad mínima estándar exigida en programas poblacionales de cribado oncológico</div>
+      </div>
+    </div>
+
+    <p class="cite-end mt-16 fade-in" style="transition-delay:320ms">
+      «Cuando los costes son asimétricos, F1 no es suficiente.<br>
+      Hay que mirar a los pacientes detrás de las cifras.»
+    </p>
+  </div>
+</section>
+
+<!-- ============ §II METODOLOGÍA ============ -->
+<section id="metodologia" style="background:var(--bg-secondary)">
+  <div class="container-narrow">
+    <div class="fade-in">
+      <div class="section-header">
+        <span class="section-roman">II</span>
+        <span class="section-divider"></span>
+        <span class="section-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><polyline points="7 14 11 10 14 13 20 7"/></svg>
+        </span>
+      </div>
+      <h2 class="section-title">Datos y metodología</h2>
+      <p class="font-serif italic text-sec mt-3" style="font-size:20px">Un pipeline auditable, justificado paso a paso.</p>
+    </div>
+
+    <!-- TIMELINE HORIZONTAL siempre visible -->
+    <div class="mt-12 fade-in">
+      <div class="timeline-row scroll-hide" id="timeline-row"></div>
+      <div class="timeline-progress mt-3"><div class="timeline-progress-bar" id="timeline-bar"></div></div>
+    </div>
+
+    <div class="mt-20 fade-in" x-data="{open:false}">
+      <button @click="open=!open"
+        class="w-full text-left p-5 rounded-lg border bg-trans flex items-center justify-between"
+        style="border-color:var(--border); background:var(--bg-secondary)"
+        @mouseover="$el.style.background='var(--accent-soft)'"
+        @mouseleave="$el.style.background='var(--bg-secondary)'"
+      >
+        <span class="font-medium" style="font-size:15px">Ver detalle de variables excluidas, análisis forense y ablation</span>
+        <span x-text="open ? '▴' : '▾'" style="color:var(--text-tertiary); font-size:18px"></span>
+      </button>
+
+      <div x-show="open" x-cloak x-transition:enter="transition ease-out duration-500" x-transition:enter-start="opacity-0 -translate-y-2" x-transition:enter-end="opacity-100 translate-y-0" class="mt-8">
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+          <div class="card">
+            <div class="eyebrow mb-4">Variables excluidas (6)</div>
+            <table style="width:100%; font-size:13px">
+              <tbody>
+                <tr><td class="py-1 font-mono">vive</td><td class="py-1 text-sec" style="color:var(--alert)">Leakage · prev. 3,9× sup.</td></tr>
+                <tr><td class="py-1 font-mono">coste_total</td><td class="py-1 text-sec">Post-diagnóstico</td></tr>
+                <tr><td class="py-1 font-mono">coste_farmaco</td><td class="py-1 text-sec">Post-diagnóstico</td></tr>
+                <tr><td class="py-1 font-mono">num_ingresos</td><td class="py-1 text-sec">Post-diagnóstico</td></tr>
+                <tr><td class="py-1 font-mono">dias_hospital</td><td class="py-1 text-sec">Post-diagnóstico</td></tr>
+                <tr><td class="py-1 font-mono">alcohol</td><td class="py-1 text-sec">Constante (var=0)</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="card">
+            <div class="eyebrow mb-4">Análisis forense de `vive`</div>
+            <table style="width:100%; font-size:13px">
+              <tbody>
+                <tr><td class="py-1">T1 Distribución</td><td class="py-1 font-mono text-sec">26,15% / 73,85%</td></tr>
+                <tr><td class="py-1">T2 Cáncer en vive=0</td><td class="py-1 font-mono" style="color:var(--alert)">42,77% 🚩</td></tr>
+                <tr><td class="py-1">T3 Cáncer en vive=1</td><td class="py-1 font-mono text-sec">10,97%</td></tr>
+                <tr><td class="py-1">T4 Δ edad media</td><td class="py-1 font-mono text-sec">≤ 2 años</td></tr>
+                <tr><td class="py-1">T5 Estado civil</td><td class="py-1 font-mono text-sec">Reparto plano</td></tr>
+              </tbody>
+            </table>
+            <div class="mt-3 font-semibold" style="font-size:13px">Veredicto: leakage demostrado → exclusión.</div>
+          </div>
+
+          <div class="card">
+            <div class="eyebrow mb-4">Ablation `enfermedad_cardiaca`</div>
+            <div class="space-y-2" style="font-size:13px">
+              <div>Criterio pre-comprometido: <span class="font-mono">|ΔAUC| ≤ 0,015</span></div>
+              <div>ΔAUC observado: <span class="font-mono">−0,0003</span></div>
+              <div class="font-semibold" style="color:var(--success)">✓ Conservada (neutralidad estadística confirmada)</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ §III SIMULADOR ============ -->
+<section id="simulador">
+  <div class="container-narrow">
+    <div class="fade-in">
+      <div class="section-header">
+        <span class="section-roman">III</span>
+        <span class="section-divider"></span>
+        <span class="section-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2"/><path d="M12 7v4l-3 2 3 7 3-7-3-2"/></svg>
+        </span>
+      </div>
+      <h2 class="section-title">Simulador clínico</h2>
+      <p class="font-serif italic text-sec mt-3" style="font-size:20px">Construye un paciente. El modelo predice su riesgo en tu navegador, sin servidor, en tiempo real.</p>
+    </div>
+
+    <div class="mt-12 grid grid-cols-1 lg:grid-cols-5 gap-8">
+
+      <!-- FORM 60% -->
+      <div class="lg:col-span-3 card" style="padding:0; overflow:hidden">
+        <div class="tabs-bar px-6" id="sim-tabs">
+          <button class="tab-btn active" data-tab="demo">Demografía</button>
+          <button class="tab-btn" data-tab="bio">Bioquímica</button>
+          <button class="tab-btn" data-tab="mut">Mutaciones</button>
+          <button class="tab-btn" data-tab="hab">Hábitos y salud</button>
+          <span class="tab-indicator"></span>
+        </div>
+        <div class="p-8" id="sim-tabpanels"></div>
+      </div>
+
+      <!-- RESULTADO 40% -->
+      <div class="lg:col-span-2">
+        <div class="card" style="position:sticky; top:80px; padding:28px">
+          <div class="eyebrow mb-2">Probabilidad estimada</div>
+
+          <div class="my-3" id="gauge-container">
+            <svg viewBox="0 0 200 130" style="width:100%; max-width:300px; margin:0 auto; display:block">
+              <path d="M 20 110 A 80 80 0 0 1 180 110" fill="none" stroke="#E5E5E0" stroke-width="20" stroke-linecap="round"/>
+              <path id="gauge-arc" class="gauge-arc" d="M 20 110 A 80 80 0 0 1 180 110" fill="none" stroke="#1E3A8A" stroke-width="20" stroke-linecap="round" stroke-dasharray="0 1000"/>
+              <text id="gauge-num" x="100" y="100" text-anchor="middle" font-family="JetBrains Mono,monospace" font-weight="500" font-size="34" fill="#0A0A0A">0%</text>
+            </svg>
+            <div class="eyebrow text-center mt-1">P(cáncer)</div>
+          </div>
+
+          <div id="diag-banner" class="diag-banner mt-4 p-3 rounded-lg" style="background:var(--accent-soft); border-left:3px solid var(--accent)">
+            <div class="font-semibold" id="diag-label" style="font-size:13px; color:var(--accent)">● NEGATIVO</div>
+            <div class="text-sec mt-1" id="diag-desc" style="font-size:12px">Por debajo del umbral 0,63. Sin acción inmediata.</div>
+          </div>
+
+          <!-- Tip ciclante -->
+          <div id="sim-tip" class="sim-tip">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.74V17h8v-2.26A7 7 0 0 0 12 2z"/></svg>
+            <span id="sim-tip-text">Prueba a activar BRCA1 + fumador para simular un caso de alto riesgo.</span>
+          </div>
+
+          <!-- FACTORES ACTIVOS -->
+          <div class="mt-4 p-3 rounded" style="background:var(--bg-tertiary)">
+            <div class="eyebrow mb-2" style="font-size:11px">Factores activos en este paciente</div>
+            <div id="factors-list" style="max-height:170px; overflow-y:auto"></div>
+          </div>
+
+          <div class="mt-4">
+            <div class="eyebrow mb-2" style="font-size:11px">Umbral activo</div>
+            <div class="seg w-full" id="thr-switch">
+              <button data-thr="0.63" class="active" style="flex:1">F1 (0,63)</button>
+              <button data-thr="0.38" style="flex:1">Clínico (0,38)</button>
+            </div>
+          </div>
+
+          <div class="mt-4 p-3 rounded" style="background:var(--bg-tertiary); font-size:12px">
+            <div class="flex justify-between py-0.5"><span class="text-sec">Log-odds</span><span class="font-mono" id="d-logit">0,000</span></div>
+            <div class="flex justify-between py-0.5"><span class="text-sec">P(cáncer)</span><span class="font-mono" id="d-proba">0,0%</span></div>
+            <div class="flex justify-between py-0.5"><span class="text-sec">Umbral</span><span class="font-mono" id="d-thr">0,63</span></div>
+            <div class="flex justify-between py-0.5"><span class="text-sec">Diagnóstico</span><span class="font-mono font-semibold" id="d-diag">NEGATIVO</span></div>
+          </div>
+
+          <div class="mt-4 space-y-2">
+            <button class="btn-primary w-full justify-center" id="btn-load-real" style="padding:10px 18px; font-size:13px">Cargar paciente real del test</button>
+            <button class="btn-secondary w-full justify-center" id="btn-reset" style="padding:10px 18px; font-size:13px">Reset</button>
+          </div>
+
+          <div id="real-patient-info" class="mt-3 text-ter text-center hidden" style="font-size:11px"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ §IV PUNTO OPERATIVO ============ -->
+<section id="threshold" style="background:var(--bg-secondary)">
+  <div class="container-narrow">
+    <div class="fade-in">
+      <div class="section-header">
+        <span class="section-roman">IV</span>
+        <span class="section-divider"></span>
+        <span class="section-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="3" x2="12" y2="21"/><path d="M5 8h14"/><path d="M5 8l-2 8h6l-2-8"/><path d="M19 8l-2 8h6l-2-8"/></svg>
+        </span>
+      </div>
+      <h2 class="section-title">Punto operativo</h2>
+      <p class="font-serif italic text-sec mt-3" style="font-size:20px">Mueve el umbral. Observa el coste real en pacientes.</p>
+    </div>
+
+    <div class="mt-8 flex items-center gap-4 flex-wrap">
+      <span class="eyebrow">Modelo evaluado:</span>
+      <div class="seg" id="thr-model-switch">
+        <button data-model="logreg" class="active">LogReg</button>
+        <button data-model="xgb">XGBoost</button>
+        <button data-model="rf">RF</button>
+        <button data-model="lgbm">LightGBM</button>
+        <button data-model="mlp">MLP</button>
+      </div>
+    </div>
+
+    <!-- Card slider + matriz + impact -->
+    <div class="mt-10 grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+      <!-- COL 1: Slider -->
+      <div class="card" style="padding:32px">
+        <div class="eyebrow mb-2">Umbral de decisión</div>
+        <div class="font-mono" style="font-size:44px; font-weight:500" id="thr-val">0,63</div>
+        <div class="relative mt-4">
+          <input type="range" class="thr-slider" id="thr-slider" min="0.05" max="0.95" step="0.01" value="0.63">
+          <div class="flex justify-between text-ter mt-2" style="font-size:11px">
+            <span>0,05</span><span>0,95</span>
+          </div>
+          <div class="mt-4 flex flex-col gap-2 text-sec" style="font-size:12px">
+            <button class="text-left hover:underline" onclick="document.getElementById('thr-slider').value=0.38; document.getElementById('thr-slider').dispatchEvent(new Event('input'));">▼ Clínico (0,38)</button>
+            <button class="text-left hover:underline" onclick="document.getElementById('thr-slider').value=0.63; document.getElementById('thr-slider').dispatchEvent(new Event('input'));">▼ F1-óptimo (0,63)</button>
+          </div>
+        </div>
+        <div class="mt-5 text-sec font-serif italic" style="font-size:14px; line-height:1.5" id="thr-desc">Umbral intermedio.</div>
+
+        <div class="mt-6 pt-5 border-t" style="border-color:var(--border)">
+          <div class="grid grid-cols-2 gap-x-3 gap-y-3" style="font-size:13px">
+            <div><div class="text-ter eyebrow mb-1" style="font-size:10px">Precision</div><div class="font-mono" id="m-prec">0,000</div></div>
+            <div><div class="text-ter eyebrow mb-1" style="font-size:10px">Sensibilidad</div><div class="font-mono" id="m-rec">0,000</div></div>
+            <div><div class="text-ter eyebrow mb-1" style="font-size:10px">Especificidad</div><div class="font-mono" id="m-spec">0,000</div></div>
+            <div><div class="text-ter eyebrow mb-1" style="font-size:10px">F1</div><div class="font-mono" id="m-f1">0,000</div></div>
+            <div class="col-span-2"><div class="text-ter eyebrow mb-1" style="font-size:10px">Biopsias / cáncer</div><div class="font-mono" id="m-bxc">0,00</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- COL 2: Matriz numérica -->
+      <div class="card" style="padding:32px">
+        <div class="eyebrow mb-4 text-center">Matriz de confusión · n = 7.501</div>
+        <div class="cm-grid" style="max-width:none">
+          <div class="cm-cell cm-tn"><div class="num" id="cm-tn">0</div><div class="lbl">TN</div></div>
+          <div class="cm-cell cm-fp"><div class="num" id="cm-fp">0</div><div class="lbl">FP</div></div>
+          <div class="cm-cell cm-fn"><div class="num" id="cm-fn">0</div><div class="lbl">FN</div></div>
+          <div class="cm-cell cm-tp"><div class="num" id="cm-tp">0</div><div class="lbl">TP</div></div>
+        </div>
+      </div>
+
+      <!-- COL 3: Traducción a pacientes (humanizado) -->
+      <div class="card" style="padding:24px">
+        <div class="eyebrow mb-4 text-center">Traducción a pacientes</div>
+        <div class="space-y-3">
+          <div class="impact-row impact-tp">
+            <div class="iconwrap">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 12 10 17 19 7"/></svg>
+            </div>
+            <div>
+              <div class="num" id="imp-tp">0</div>
+              <div class="lbl">cánceres <strong>detectados a tiempo</strong></div>
+            </div>
+          </div>
+          <div class="impact-row impact-fn">
+            <div class="iconwrap">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+            </div>
+            <div>
+              <div class="num" id="imp-fn">0</div>
+              <div class="lbl">cánceres <strong>NO detectados</strong></div>
+              <div class="desc">pierden la oportunidad de detección precoz</div>
+            </div>
+          </div>
+          <div class="impact-row impact-fp">
+            <div class="iconwrap">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><circle cx="12" cy="17" r="0.5" fill="currentColor"/></svg>
+            </div>
+            <div>
+              <div class="num" id="imp-fp">0</div>
+              <div class="lbl">personas sanas con <strong>biopsia innecesaria</strong></div>
+              <div class="desc">estrés y coste, sin daño físico relevante</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-8 text-center font-serif italic" style="font-size:18px; color:var(--text-secondary)" id="thr-narrative">
+      Umbral intermedio. Buscamos equilibrio entre detección y biopsias.
+    </div>
+
+    <!-- Mosaico reactivo de pacientes -->
+    <div class="mt-16 card" style="padding:36px">
+      <h3 style="font-size:20px; font-weight:600">Los 7.501 pacientes del test, según el umbral elegido</h3>
+      <p class="text-sec mt-1" style="font-size:13px">
+        Cada cuadrado representa <span class="font-mono">≈ 75 pacientes</span>. Mueve el slider de arriba para ver cómo cambian las categorías.
+      </p>
+
+      <div class="mini-mosaic" id="mini-mosaic"></div>
+
+      <div class="cm-legend">
+        <div><span class="cm-legend-swatch" style="background:#E5E5E0; border-color:#D4D4CE"></span>Sanos correctos <span class="font-mono ml-1" id="leg-tn">5217</span></div>
+        <div><span class="cm-legend-swatch" style="background:#FEF3C7; border-color:#FCD34D"></span>Falsos positivos <span class="font-mono ml-1" id="leg-fp">837</span></div>
+        <div><span class="cm-legend-swatch" style="background:#FECACA; border-color:#FCA5A5"></span>Falsos negativos <span class="font-mono ml-1" id="leg-fn">522</span></div>
+        <div><span class="cm-legend-swatch" style="background:#1E3A8A; border-color:#1E3A8A"></span>Cánceres detectados <span class="font-mono ml-1" id="leg-tp">925</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ §V COMPARATIVA ============ -->
+<section id="comparativa">
+  <div class="container-narrow">
+    <div class="fade-in">
+      <div class="section-header">
+        <span class="section-roman">V</span>
+        <span class="section-divider"></span>
+        <span class="section-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="13" width="4" height="8"/><rect x="10" y="9" width="4" height="12"/><rect x="17" y="5" width="4" height="16"/></svg>
+        </span>
+      </div>
+      <h2 class="section-title">Comparativa de modelos</h2>
+      <p class="font-serif italic text-sec mt-3" style="font-size:20px">Cinco aproximaciones. Rendimientos estadísticamente equivalentes en el extremo superior.</p>
+    </div>
+
+    <div class="mt-8 text-sec" style="font-size:13px">
+      LogReg y XGBoost son <strong>estadísticamente indistinguibles</strong> (IC95% solapados en las 4 métricas).
+    </div>
+
+    <div class="card mt-4 overflow-x-auto" style="padding:0">
+      <table class="data">
+        <thead><tr>
+          <th>Modelo</th><th>t*</th>
+          <th>Precision</th><th>Sensibilidad</th>
+          <th>F1</th><th>AUC-ROC</th>
+        </tr></thead>
+        <tbody id="cmp-tbody"></tbody>
+      </table>
+    </div>
+
+    <!-- HISTOGRAMA de separación de probabilidades -->
+    <div class="mt-12 card">
+      <h3 style="font-size:20px; font-weight:600">Cómo separa el modelo a los pacientes</h3>
+      <p class="text-sec mt-1" style="font-size:13px">Distribución de probabilidades predichas por LogReg sobre los 7.501 pacientes del test set. La zona de solape entre 0,38 y 0,63 es donde se concentra la mayoría de errores.</p>
+
+      <div style="max-width:880px; margin:24px auto 0; height:340px">
+        <canvas id="chart-hist"></canvas>
+      </div>
+
+      <div class="mt-4 rounded p-4" style="background:var(--accent-soft); font-size:13px; line-height:1.6">
+        Un modelo perfecto separaría las dos distribuciones completamente. En la práctica se solapan, y el umbral elegido decide qué pacientes caen a cada lado. <strong>El territorio dudoso entre <span class="font-mono">0,38</span> y <span class="font-mono">0,63</span> concentra la mayoría de FN y FP.</strong>
+      </div>
+    </div>
+
+    <div class="mt-12 grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div class="card">
+        <div class="eyebrow mb-4">Curva ROC</div>
+        <div style="aspect-ratio:1; max-width:520px; margin:0 auto">
+          <canvas id="chart-roc"></canvas>
+        </div>
+      </div>
+      <div class="card">
+        <div class="eyebrow mb-4">Curva Precision-Recall</div>
+        <div style="aspect-ratio:1; max-width:520px; margin:0 auto">
+          <canvas id="chart-pr"></canvas>
+        </div>
+        <div class="text-ter mt-2" style="font-size:12px">Línea punteada: precision base = prevalencia (0,193). Cualquier modelo útil queda por encima.</div>
+      </div>
+    </div>
+
+    <div class="mt-8 flex items-center gap-3 flex-wrap">
+      <span class="eyebrow">Resaltar modelo:</span>
+      <div class="seg" id="hl-switch">
+        <button data-hl="all" class="active">Todos</button>
+        <button data-hl="logreg">LogReg</button>
+        <button data-hl="xgb">XGB</button>
+        <button data-hl="rf">RF</button>
+        <button data-hl="lgbm">LGBM</button>
+        <button data-hl="mlp">MLP</button>
+      </div>
+    </div>
+
+    <div class="mt-6 text-ter" style="font-size:12px">
+      Generalización val → test: |ΔF1| ≤ 0,008 · |ΔAUC| ≤ 0,004 · Bootstrap 1&thinsp;000 resamples estratificados.
+    </div>
+  </div>
+</section>
+
+<!-- ============ §VI RECOMENDACIÓN ============ -->
+<section id="recomendacion" style="background:var(--bg-secondary)">
+  <div class="container-narrow">
+    <div class="fade-in">
+      <div class="section-header">
+        <span class="section-roman">VI</span>
+        <span class="section-divider"></span>
+        <span class="section-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 4 6v6c0 5 3.5 8.5 8 10 4.5-1.5 8-5 8-10V6l-8-4z"/><polyline points="9 12 11 14 15 10"/></svg>
+        </span>
+      </div>
+      <h2 class="section-title">Decisión de despliegue</h2>
+      <p class="font-serif italic text-sec mt-3" style="font-size:20px">Un modelo. Dos puntos operativos. Auditable de extremo a extremo.</p>
+    </div>
+
+    <!-- MANIFIESTO pregunta-respuesta -->
+    <div class="manifesto fade-in">
+      <div class="eyebrow">La pregunta</div>
+      <div class="question">
+        De los cinco modelos probados,<br>
+        ¿cuál llevarías al hospital mañana?
+      </div>
+      <div class="divider-vert"></div>
+      <div class="eyebrow">La respuesta</div>
+      <div class="answer">Regresión Logística.</div>
+      <p class="font-serif italic mt-6" style="font-size:18px; max-width:600px; margin-left:auto; margin-right:auto; line-height:1.5; color:var(--text-secondary)">
+        El modelo más simple no solo iguala a los demás. Los supera en lo que importa para un sistema sanitario: ser auditable, reproducible y entendible por humanos.
+      </p>
+      <div class="downhint">↓ Por qué</div>
+    </div>
+
+    <div class="card mt-6" style="padding:48px; border-left:4px solid var(--accent); box-shadow:var(--shadow-md)">
+      <div class="eyebrow">Modelo seleccionado</div>
+      <h3 class="mt-2" style="font-size:30px">Regresión Logística L2 · punto operativo clínico</h3>
+      <p class="text-sec mt-2">Sensibilidad 86,5 %. Auditable. Sin sobreajuste. Despliegue inmediato.</p>
+
+      <div class="mt-10 grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div>
+          <div class="kpi-num" style="font-size:48px">86,5%</div>
+          <div class="eyebrow mt-2">Sensibilidad</div>
+          <div class="text-sec mt-2" style="font-size:13px">1&thinsp;252 de 1&thinsp;447 cánceres detectados.</div>
+        </div>
+        <div>
+          <div class="kpi-num" style="font-size:48px">2,74</div>
+          <div class="eyebrow mt-2">Biopsias / cáncer</div>
+          <div class="text-sec mt-2" style="font-size:13px">Dentro del estándar 2-10 de cribado poblacional.</div>
+        </div>
+        <div>
+          <div class="kpi-num" style="font-size:48px">39</div>
+          <div class="eyebrow mt-2">Coeficientes</div>
+          <div class="text-sec mt-2" style="font-size:13px">Modelo auditable por comité clínico.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-16">
+      <h3>Coeficientes del modelo</h3>
+      <p class="text-sec mt-2" style="font-size:13px">Top 15 por |peso|. <span style="color:var(--alert)">Rojo:</span> aumenta riesgo. <span style="color:var(--accent)">Azul:</span> lo disminuye.</p>
+
+      <div class="mt-4 seg" id="coef-sort">
+        <button data-sort="abs" class="active">Por |peso|</button>
+        <button data-sort="pos">Solo positivos</button>
+        <button data-sort="neg">Solo negativos</button>
+      </div>
+
+      <div class="card mt-6" id="coef-table"></div>
+    </div>
+
+    <div class="mt-12" x-data="{open:false}">
+      <button @click="open=!open" class="w-full text-left p-5 rounded-lg border bg-trans flex items-center justify-between"
+        style="border-color:var(--border); background:var(--bg-tertiary)">
+        <span class="font-medium" style="font-size:15px">Limitaciones del modelo</span>
+        <span x-text="open ? '▴' : '▾'" style="color:var(--text-tertiary)"></span>
+      </button>
+      <div x-show="open" x-cloak x-transition class="mt-4 card text-sec" style="font-size:14px; line-height:1.7">
+        <ul style="list-style:disc; padding-left:20px" class="space-y-2">
+          <li>Dataset sintético: no garantiza transferibilidad a población clínica real.</li>
+          <li>Requiere 7 marcadores genéticos (BRCA1, TP53, EGFR, KRAS, PIK3CA, ALK, BRAF) que en práctica clínica requieren paneles de secuenciación (~300-800 € / paciente).</li>
+          <li>Sin componente de imagen (mamografía, TC, PET).</li>
+          <li>Sin señal temporal (modelo transversal).</li>
+          <li>AUC estimado ≈ 0,65-0,70 sin marcadores genéticos (rango habitual de scores clínicos sin componente genético).</li>
+        </ul>
+        <div class="cite mt-4">Datos de supervivencia citados: SEER 2024 (Surveillance, Epidemiology, and End Results, NCI). Coste de biopsia: media de estudios poblacionales 2019-2023.</div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ============ REFLEXIÓN FINAL ============ -->
+<section id="reflexion">
+  <div class="container-narrow" style="max-width:780px; text-align:center">
+    <div class="eyebrow fade-in">Reflexión final</div>
+    <h2 class="section-title fade-in" style="font-style:italic; margin-top:12px; transition-delay:80ms; font-size:clamp(28px,3.6vw,42px)">
+      Si tuviera que entregar este modelo al hospital,<br>esto es lo que diría.
+    </h2>
+
+    <div class="reflection-card fade-in" style="transition-delay:160ms; text-align:left">
+      <p>Recomendaría el modelo de <strong>Regresión Logística</strong> sobre el de XGBoost, aunque ambos rinden estadísticamente igual sobre el conjunto de test.</p>
+      <p>La diferencia no está en la precisión —está en lo que un comité clínico puede leer, entender y auditar. <strong>39 coeficientes interpretables, cero cajas negras.</strong></p>
+      <p>Lo desplegaría con el umbral <span class="font-mono">0,38</span>, sacrificando precisión para no perder cánceres reales. En oncología, un falso negativo vale más que diez falsos positivos. El sistema sanitario puede absorber biopsias adicionales; no puede absorber diagnósticos perdidos.</p>
+      <p>Y lo monitorizaría cada tres meses con datos reales que vayan entrando. Porque un dataset sintético, por bien generado que esté, no es la realidad. Es solo un punto de partida honesto.</p>
+      <div class="signature">— Alejandro Déniz Solana · Ingeniería Matemática · UAX 2025/26</div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer style="background:var(--bg-tertiary); padding:60px 0; border-top:1px solid var(--border)">
+  <div class="container-narrow grid grid-cols-1 md:grid-cols-2 gap-8">
+    <div>
+      <div class="font-medium">Alejandro Déniz Solana</div>
+      <div class="text-sec mt-1" style="font-size:13px">Inteligencia Artificial · Ingeniería Matemática</div>
+      <div class="text-ter mt-1" style="font-size:13px">Universidad Alfonso X el Sabio · Curso 2025-2026</div>
+    </div>
+    <div class="md:text-right">
+      <a href="#" class="font-medium" style="color:var(--accent)">Repositorio en GitHub →</a>
+      <div class="text-ter mt-2" style="font-size:12px">Construido con HTML, Tailwind CSS, Chart.js y Alpine.js. Sin frameworks, sin build. Inferencia verificable en navegador.</div>
+      <div class="text-ter mt-1" style="font-size:12px">Última actualización: 16 de mayo de 2026</div>
+    </div>
+  </div>
+</footer>
+
+<!-- TOUR OVERLAY -->
+<div id="tour-root"></div>
+
+<noscript>
+<div style="padding:80px 32px; text-align:center">
+  Esta página requiere JavaScript para realizar inferencia en el navegador. Por favor habilítalo.
+</div>
+</noscript>
+
+<script>
+// ===================== ESTADO GLOBAL =====================
+window.MODEL = null;
+window.TEST_PREDICTIONS = null;
+window.ROC_CURVES = null;
+window.COEFS = null;
+window.TEST_SAMPLE = null;
+
+const SIM = { patient:{}, threshold:0.63 };
+const THR = { model:'logreg', value:0.63 };
+
+const fmt = (n, d=3) => n.toFixed(d).replace('.', ',');
+const fmtPct = (n, d=1) => (n*100).toFixed(d).replace('.', ',') + '%';
+
+// Contexto clinico breve de mutaciones y habitos
+const CLIN_INFO = {
+  mut_BRCA1:  "Gen supresor tumoral. Mutaciones × 5-10 riesgo mama/ovario.",
+  mut_TP53:   "Guardián del genoma. Mutaciones en >50 % de cánceres humanos.",
+  mut_EGFR:   "Receptor de crecimiento. Diana terapéutica en cáncer de pulmón.",
+  mut_KRAS:   "Oncogén RAS. Frecuente en colon, páncreas, pulmón.",
+  mut_PIK3CA: "Vía PI3K/AKT. Mutaciones comunes en mama y endometrio.",
+  mut_ALK:    "Reordenamiento ALK. Cáncer de pulmón no microcítico.",
+  mut_BRAF:   "Mutación V600E. Frecuente en melanoma y tiroides.",
+  fumador:    "Causa 15+ tipos de cáncer. Coef +1,30 (3.º más influyente).",
+  obesidad:   "Asociada a 13 tipos de cáncer. Coef +0,97.",
+  diabetes:   "Asociada a varios tumores digestivos. Coef +0,04 (neutro).",
+  hipertension:"Marcador indirecto de salud cardiovascular. Coef +0,46.",
+  asma:       "Sin asociación causal directa demostrada.",
+  epoc:       "Asociada a cáncer de pulmón vía exposición compartida.",
+  enfermedad_cardiaca:"ⓘ Variable neutra tras ablation (ΔAUC = −0,0003).",
+};
+
+// ===================== CARGA =====================
+async function loadAll(){
+  const [a,b,c,d,e] = await Promise.all([
+    fetch('data/logreg_model.json').then(r=>r.json()),
+    fetch('data/test_predictions.json').then(r=>r.json()),
+    fetch('data/roc_curves.json').then(r=>r.json()),
+    fetch('data/coefficients_table.json').then(r=>r.json()),
+    fetch('data/test_features_sample.json').then(r=>r.json()),
+  ]);
+  window.MODEL = a;
+  window.TEST_PREDICTIONS = b;
+  window.ROC_CURVES = c;
+  window.COEFS = d;
+  window.TEST_SAMPLE = e;
+}
+
+// ===================== INFERENCIA =====================
+function predictLogReg(patient){
+  const m = window.MODEL;
+  const x = new Array(m.n_features_in).fill(0);
+  m.numerical_features.forEach((f, i) => {
+    const raw = +patient[f];
+    x[i] = (raw - m.scaler.means[i]) / m.scaler.scales[i];
+  });
+  m.binary_features.forEach((f, i) => {
+    x[10 + i] = patient[f] ? 1 : 0;
+  });
+  let idx = 24;
+  for(const [cat, opts] of Object.entries(m.categorical_features)){
+    for(const opt of opts){
+      x[idx] = (patient[cat] === opt) ? 1 : 0;
+      idx++;
+    }
+  }
+  let logit = m.intercept;
+  for(let i=0;i<x.length;i++) logit += m.coefficients[i]*x[i];
+  const proba = 1/(1+Math.exp(-logit));
+  return {logit, proba, x};
+}
+
+function verifyInference(){
+  const sample = window.TEST_SAMPLE.patients[0];
+  const {proba} = predictLogReg(sample.features);
+  const diff = Math.abs(proba - sample.p_logreg);
+  if(diff < 0.001){
+    console.log(`%c✓ JS inference verified: match sklearn within 0.001 (diff=${diff.toExponential(2)}, paciente id=${sample.id})`, 'color:#15803D;font-weight:bold');
+  } else {
+    console.error(`✗ JS inference MISMATCH: js=${proba.toFixed(6)} vs sklearn=${sample.p_logreg.toFixed(6)} (diff=${diff.toExponential(2)})`);
+  }
+}
+
+// ===================== MOSAICO DE PREVALENCIA =====================
+function mulberry32(seed){
+  return function(){
+    let t = seed += 0x6D2B79F5;
+    t = Math.imul(t ^ t >>> 15, t | 1);
+    t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+// Set fijo (seed 42) de los 19 indices destinados a cancer
+const CANCER_INDICES = (() => {
+  const rng = mulberry32(42);
+  const s = new Set();
+  while(s.size < 19) s.add(Math.floor(rng()*100));
+  return s;
+})();
+
+function renderPrevalenceMosaicStatic(){
+  const container = document.getElementById('mosaic-prev');
+  if(!container) return;
+  let html = '';
+  for(let i=0; i<100; i++){
+    const isPos = CANCER_INDICES.has(i);
+    html += `<span class="mosaic-fig" data-i="${i}" data-cancer="${isPos?1:0}"
+      title="Paciente ${i+1} · ${isPos?'cáncer':'sano'}">
+      <svg viewBox="0 0 16 20" fill="#D4D4CE">
+        <circle cx="8" cy="4" r="3"/>
+        <path d="M2 18 L2 12 Q2 9 5 9 L11 9 Q14 9 14 12 L14 18 Z"/>
+      </svg></span>`;
+  }
+  container.innerHTML = html;
+}
+
+let MOSAIC_TIMERS = [];
+function clearMosaicTimers(){ MOSAIC_TIMERS.forEach(clearTimeout); MOSAIC_TIMERS = []; }
+
+function playMosaicAnimation(){
+  clearMosaicTimers();
+  const container = document.getElementById('mosaic-prev');
+  if(!container) return;
+  const status = document.getElementById('mosaic-status');
+  const counter = document.getElementById('mosaic-counter');
+  const figs = container.querySelectorAll('.mosaic-fig');
+
+  // Reset
+  figs.forEach(f => {
+    f.classList.remove('in', 'cancer-flip');
+    f.querySelector('svg').setAttribute('fill', '#D4D4CE');
+  });
+  counter.textContent = '0';
+  status.style.opacity = '0';
+  status.textContent = '';
+
+  // FASE 1: aparición fila por fila (stagger 8ms)
+  figs.forEach((f, i) => {
+    MOSAIC_TIMERS.push(setTimeout(() => f.classList.add('in'), i * 8));
+  });
+
+  // FASE 2: pausa + texto
+  MOSAIC_TIMERS.push(setTimeout(() => {
+    status.textContent = '50.001 pacientes en el estudio.';
+    status.style.opacity = '1';
+  }, 100 * 8 + 200));
+
+  // FASE 3: los 19 cáncer se vuelven rojos uno a uno
+  const cancerArr = [...CANCER_INDICES].sort((a,b)=>a-b);
+  const phase3Start = 100 * 8 + 700;
+  let cancerCount = 0;
+  cancerArr.forEach((idx, k) => {
+    MOSAIC_TIMERS.push(setTimeout(() => {
+      const fig = container.querySelector(`.mosaic-fig[data-i="${idx}"]`);
+      if(fig){
+        fig.querySelector('svg').setAttribute('fill', '#9F1239');
+        fig.classList.add('cancer-flip');
+        cancerCount++;
+        counter.textContent = String(cancerCount);
+      }
+    }, phase3Start + k * 40));
+  });
+
+  // FASE 4: texto final
+  MOSAIC_TIMERS.push(setTimeout(() => {
+    status.style.opacity = '0';
+    setTimeout(() => {
+      status.textContent = 'de cada 100 pacientes desarrolla cáncer.';
+      status.style.opacity = '1';
+    }, 200);
+  }, phase3Start + cancerArr.length * 40 + 400));
+}
+
+function setupMosaicViewportTrigger(){
+  const container = document.getElementById('mosaic-prev');
+  if(!container) return;
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if(e.isIntersecting){
+        playMosaicAnimation();
+        obs.unobserve(e.target);
+      }
+    });
+  }, {threshold:0.4});
+  obs.observe(container);
+}
+window.playMosaicAnimation = playMosaicAnimation;
+
+// ===================== HERO ANIMACIONES =====================
+function animateKPIs(){
+  document.querySelectorAll('.kpi-num[data-final]').forEach((el, i) => {
+    const final = parseFloat(el.dataset.final);
+    const dec = parseInt(el.dataset.decimals);
+    const suf = el.dataset.suffix || '';
+    const start = performance.now();
+    const dur = 1200;
+    const step = (t) => {
+      const e = Math.min((t-start)/dur, 1);
+      const k = 1 - Math.pow(1-e, 4);
+      const v = (final * k).toFixed(dec).replace('.', ',');
+      el.textContent = v + suf;
+      if(e<1) requestAnimationFrame(step);
+    };
+    setTimeout(()=>requestAnimationFrame(step), i*100);
+  });
+}
+function setupFadeIn(){
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if(e.isIntersecting){
+        e.target.classList.add('visible');
+        obs.unobserve(e.target);
+      }
+    });
+  }, {threshold:0.15});
+  document.querySelectorAll('.fade-in').forEach(el => obs.observe(el));
+}
+function setupNav(){
+  const nav = document.getElementById('topnav');
+  const update = () => {
+    if(window.scrollY > 50) nav.classList.add('scrolled');
+    else nav.classList.remove('scrolled');
+  };
+  update();
+  window.addEventListener('scroll', update, {passive:true});
+}
+
+// ===================== SIMULADOR =====================
+function defaultPatient(){
+  const m = window.MODEL;
+  const p = {};
+  m.numerical_features.forEach(f => p[f] = m.feature_ranges[f].mean);
+  m.binary_features.forEach(f => p[f] = 0);
+  for(const cat in m.categorical_baseline) p[cat] = m.categorical_baseline[cat];
+  return p;
+}
+function sliderHTML(field, label, unit, decimals){
+  const r = window.MODEL.feature_ranges[field];
+  const v = SIM.patient[field];
+  return `<div class="mb-5">
+    <div class="flex justify-between items-baseline mb-2">
+      <label class="font-medium" style="font-size:14px">${label} <span class="text-ter" style="font-size:12px">${unit}</span></label>
+      <span class="font-mono" id="lab-${field}" style="font-size:14px">${(+v).toFixed(decimals).replace('.', ',')}</span>
+    </div>
+    <input type="range" min="${r.min}" max="${r.max}" step="${decimals>0?Math.pow(10,-decimals):1}" value="${v}" data-field="${field}" data-dec="${decimals}" class="sim-input">
+  </div>`;
+}
+function segmentedHTML(field, label, opts){
+  return `<div class="mb-5">
+    <label class="font-medium block mb-2" style="font-size:14px">${label}</label>
+    <div class="seg" data-segfield="${field}">
+      ${opts.map(o=>`<button data-val="${o}" class="${SIM.patient[field]===o?'active':''}">${o}</button>`).join('')}
+    </div>
+  </div>`;
+}
+function selectHTML(field, label, opts){
+  return `<div class="mb-5">
+    <label class="font-medium block mb-2" style="font-size:14px">${label}</label>
+    <select class="sim-select w-full p-2 rounded border bg-white" data-field="${field}" style="border-color:var(--border); font-size:14px">
+      ${opts.map(o=>`<option value="${o}" ${SIM.patient[field]===o?'selected':''}>${o}</option>`).join('')}
+    </select>
+  </div>`;
+}
+function toggleHTML(field, label, infoText){
+  const on = SIM.patient[field] ? 'on' : '';
+  return `<div class="mb-4 pb-3 border-b" style="border-color:var(--border)">
+    <div class="flex justify-between items-start gap-3">
+      <div class="flex-1">
+        <div class="font-medium" style="font-size:14px">${label}</div>
+        ${infoText?`<div class="text-ter mt-1" style="font-size:11px; line-height:1.45">${infoText}</div>`:''}
+      </div>
+      <div class="tg ${on}" data-togglefield="${field}"><div class="knob"></div></div>
+    </div>
+  </div>`;
+}
+
+function buildFormTab(tab){
+  const wrap = document.createElement('div');
+  if(tab === 'demo'){
+    wrap.innerHTML = `
+      ${sliderHTML('edad', 'Edad', 'años', 0)}
+      ${sliderHTML('num_hijos', 'Núm. hijos', '', 0)}
+      ${sliderHTML('distancia_hospital_km', 'Distancia al hospital', 'km', 1)}
+      ${segmentedHTML('zona', 'Zona', ['Rural','Semiurbana','Urbana'])}
+      ${selectHTML('estado_civil', 'Estado civil', ['Casado','Divorciado','Soltero','Viudo'])}
+      ${selectHTML('nivel_educativo', 'Nivel educativo', ['Primaria','Secundaria','Sin estudios','Universitario'])}
+      ${selectHTML('nivel_ingresos', 'Nivel de ingresos', ['Alto','Bajo','Medio','Muy bajo'])}
+      ${segmentedHTML('tipo_seguro', 'Tipo de seguro', ['Mixto','Privado','Publico'])}
+    `;
+  } else if(tab === 'bio'){
+    wrap.innerHTML = `
+      ${sliderHTML('glucosa', 'Glucosa', 'mg/dL', 0)}
+      ${sliderHTML('colesterol', 'Colesterol', 'mg/dL', 0)}
+      ${sliderHTML('trigliceridos', 'Triglicéridos', 'mg/dL', 0)}
+      ${sliderHTML('hemoglobina', 'Hemoglobina', 'g/dL', 1)}
+      ${sliderHTML('leucocitos', 'Leucocitos', '×10³/µL', 1)}
+      ${sliderHTML('plaquetas', 'Plaquetas', '×10³/µL', 0)}
+      ${sliderHTML('creatinina', 'Creatinina', 'mg/dL', 2)}
+    `;
+  } else if(tab === 'mut'){
+    const muts = [['mut_BRCA1','BRCA1'],['mut_TP53','TP53'],['mut_EGFR','EGFR'],
+                  ['mut_KRAS','KRAS'],['mut_PIK3CA','PIK3CA'],['mut_ALK','ALK'],['mut_BRAF','BRAF']];
+    wrap.innerHTML = muts.map(([f,n]) => toggleHTML(f, n, CLIN_INFO[f])).join('');
+  } else {
+    const habits = [['fumador','Fumador'],['obesidad','Obesidad'],['diabetes','Diabetes'],
+                    ['hipertension','Hipertensión'],['asma','Asma'],['epoc','EPOC'],
+                    ['enfermedad_cardiaca','Enfermedad cardíaca']];
+    wrap.innerHTML = habits.map(([f,n]) => toggleHTML(f, n, CLIN_INFO[f])).join('') +
+      segmentedHTML('actividad_fisica', 'Actividad física', ['Alta','Moderada','Baja']);
+  }
+  return wrap;
+}
+function renderTab(tab){
+  const panel = document.getElementById('sim-tabpanels');
+  panel.innerHTML = '';
+  panel.appendChild(buildFormTab(tab));
+  bindFormHandlers();
+}
+function bindFormHandlers(){
+  document.querySelectorAll('.sim-input').forEach(inp => {
+    inp.addEventListener('input', (e) => {
+      const f = e.target.dataset.field;
+      const dec = parseInt(e.target.dataset.dec);
+      const v = parseFloat(e.target.value);
+      SIM.patient[f] = v;
+      document.getElementById(`lab-${f}`).textContent = v.toFixed(dec).replace('.', ',');
+      runInference();
+    });
+  });
+  document.querySelectorAll('.sim-select').forEach(sel => {
+    sel.addEventListener('change', e => {
+      SIM.patient[e.target.dataset.field] = e.target.value;
+      runInference();
+    });
+  });
+  document.querySelectorAll('[data-segfield]').forEach(seg => {
+    seg.querySelectorAll('button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const f = seg.dataset.segfield;
+        seg.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        SIM.patient[f] = btn.dataset.val;
+        runInference();
+      });
+    });
+  });
+  document.querySelectorAll('[data-togglefield]').forEach(tg => {
+    tg.addEventListener('click', () => {
+      const f = tg.dataset.togglefield;
+      const on = tg.classList.toggle('on');
+      SIM.patient[f] = on ? 1 : 0;
+      runInference();
+    });
+  });
+}
+function setupTabs(){
+  const bar = document.getElementById('sim-tabs');
+  const indicator = bar.querySelector('.tab-indicator');
+  const updateIndicator = (btn) => {
+    const r = btn.getBoundingClientRect();
+    const pr = bar.getBoundingClientRect();
+    indicator.style.left = (r.left - pr.left) + 'px';
+    indicator.style.width = r.width + 'px';
+  };
+  bar.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      bar.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      updateIndicator(btn);
+      renderTab(btn.dataset.tab);
+    });
+  });
+  setTimeout(()=>updateIndicator(bar.querySelector('.tab-btn.active')), 50);
+  window.addEventListener('resize', ()=>updateIndicator(bar.querySelector('.tab-btn.active')));
+}
+function setupThrSwitch(){
+  document.querySelectorAll('#thr-switch button').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('#thr-switch button').forEach(x=>x.classList.remove('active'));
+      b.classList.add('active');
+      SIM.threshold = parseFloat(b.dataset.thr);
+      runInference();
+    });
+  });
+}
+
+// Devuelve descomposicion logit por feature activa (top contribuyentes)
+function decomposeLogit(patient){
+  const m = window.MODEL;
+  const contribs = [];
+  m.numerical_features.forEach((f, i) => {
+    const raw = +patient[f];
+    const sc = (raw - m.scaler.means[i]) / m.scaler.scales[i];
+    const c = sc * m.coefficients[i];
+    // Solo si esta significativamente fuera de mean (>0.5 std)
+    if(Math.abs(sc) > 0.5){
+      const fmtVal = f === 'edad' ? `${Math.round(raw)}` : raw.toFixed(1).replace('.', ',');
+      contribs.push({label:`${f} = ${fmtVal}`, val:c});
+    }
+  });
+  m.binary_features.forEach((f, i) => {
+    if(patient[f]){
+      contribs.push({label:f, val: m.coefficients[10+i]});
+    }
+  });
+  let idx = 24;
+  for(const [cat, opts] of Object.entries(m.categorical_features)){
+    for(const opt of opts){
+      if(patient[cat] === opt){
+        contribs.push({label:`${cat} = ${opt}`, val: m.coefficients[idx]});
+      }
+      idx++;
+    }
+  }
+  contribs.sort((a,b) => Math.abs(b.val) - Math.abs(a.val));
+  return contribs.slice(0, 6);
+}
+
+function runInference(){
+  const {logit, proba} = predictLogReg(SIM.patient);
+  const arcLen = 251.33;
+  const dash = proba * arcLen;
+  const arc = document.getElementById('gauge-arc');
+  arc.setAttribute('stroke-dasharray', `${dash} ${arcLen}`);
+  let col;
+  if(proba < 0.38) col = '#1E3A8A';
+  else if(proba < 0.63) col = '#C2410C';
+  else col = '#9F1239';
+  arc.setAttribute('stroke', col);
+  document.getElementById('gauge-num').textContent = (proba*100).toFixed(1).replace('.', ',') + '%';
+
+  const isPos = proba >= SIM.threshold;
+  const banner = document.getElementById('diag-banner');
+  const lbl = document.getElementById('diag-label');
+  const desc = document.getElementById('diag-desc');
+  if(isPos){
+    banner.style.background = 'var(--alert-soft)';
+    banner.style.borderLeftColor = 'var(--alert)';
+    lbl.style.color = 'var(--alert)';
+    lbl.textContent = '● POSITIVO';
+    desc.textContent = `Sobre el umbral ${fmt(SIM.threshold,2)}. Recomendación: biopsia.`;
+  } else {
+    banner.style.background = '#F0FDF4';
+    banner.style.borderLeftColor = 'var(--success)';
+    lbl.style.color = 'var(--success)';
+    lbl.textContent = '● NEGATIVO';
+    desc.textContent = `Por debajo del umbral ${fmt(SIM.threshold,2)}. Sin acción inmediata.`;
+  }
+  document.getElementById('d-logit').textContent = fmt(logit, 3);
+  document.getElementById('d-proba').textContent = (proba*100).toFixed(1).replace('.', ',') + '%';
+  document.getElementById('d-thr').textContent = fmt(SIM.threshold, 2);
+  document.getElementById('d-diag').textContent = isPos ? 'POSITIVO' : 'NEGATIVO';
+  document.getElementById('d-diag').style.color = isPos ? 'var(--alert)' : 'var(--success)';
+
+  // Factores activos
+  const factors = decomposeLogit(SIM.patient);
+  const fl = document.getElementById('factors-list');
+  if(factors.length === 0){
+    fl.innerHTML = '<div class="text-ter" style="font-size:12px; font-style:italic">Paciente cercano al promedio · sin factores destacados</div>';
+  } else {
+    fl.innerHTML = factors.map(f => `
+      <div class="factor-line">
+        <span class="lbl">${f.label}</span>
+        <span class="val ${f.val>=0?'pos':'neg'}">${f.val>=0?'+':''}${fmt(f.val, 2)}</span>
+      </div>`).join('');
+  }
+}
+
+function loadRandomPatient(){
+  const samp = window.TEST_SAMPLE.patients;
+  const p = samp[Math.floor(Math.random()*samp.length)];
+  SIM.patient = {...p.features};
+  const active = document.querySelector('#sim-tabs .tab-btn.active').dataset.tab;
+  renderTab(active);
+  runInference();
+  const info = document.getElementById('real-patient-info');
+  info.classList.remove('hidden');
+  info.textContent = `Paciente #${p.id} del test · diagnóstico real: ${p.y_true ? 'CÁNCER' : 'SANO'} · p_logreg sklearn: ${(p.p_logreg*100).toFixed(1)}%`;
+}
+function resetPatient(){
+  SIM.patient = defaultPatient();
+  const active = document.querySelector('#sim-tabs .tab-btn.active').dataset.tab;
+  renderTab(active);
+  runInference();
+  document.getElementById('real-patient-info').classList.add('hidden');
+}
+
+// ===================== UMBRAL =====================
+function recomputeMetrics(modelKey, threshold){
+  const data = window.TEST_PREDICTIONS.predictions;
+  let TP=0,FP=0,TN=0,FN=0;
+  for(const p of data){
+    const yhat = p[`p_${modelKey}`] >= threshold ? 1 : 0;
+    if(yhat===1 && p.y_true===1) TP++;
+    else if(yhat===1 && p.y_true===0) FP++;
+    else if(yhat===0 && p.y_true===0) TN++;
+    else FN++;
+  }
+  const precision = TP/(TP+FP || 1);
+  const recall = TP/(TP+FN || 1);
+  const specificity = TN/(TN+FP || 1);
+  const f1 = 2*precision*recall/(precision+recall || 1);
+  const bxc = (TP+FP)/(TP || 1);
+  return {TP,FP,TN,FN,precision,recall,specificity,f1,bxc};
+}
+
+function updateThrUI(){
+  const {TP,FP,TN,FN,precision,recall,specificity,f1,bxc} = recomputeMetrics(THR.model, THR.value);
+  updateMiniMosaic(TP, FP, TN, FN);
+  document.getElementById('cm-tn').textContent = TN.toLocaleString('es-ES');
+  document.getElementById('cm-fp').textContent = FP.toLocaleString('es-ES');
+  document.getElementById('cm-fn').textContent = FN.toLocaleString('es-ES');
+  document.getElementById('cm-tp').textContent = TP.toLocaleString('es-ES');
+  document.getElementById('imp-tp').textContent = TP.toLocaleString('es-ES');
+  document.getElementById('imp-fn').textContent = FN.toLocaleString('es-ES');
+  document.getElementById('imp-fp').textContent = FP.toLocaleString('es-ES');
+  document.getElementById('m-prec').textContent = fmt(precision, 3);
+  document.getElementById('m-rec').textContent  = fmt(recall, 3);
+  document.getElementById('m-spec').textContent = fmt(specificity, 3);
+  document.getElementById('m-f1').textContent   = fmt(f1, 3);
+  document.getElementById('m-bxc').textContent  = fmt(bxc, 2);
+  document.getElementById('thr-val').textContent = fmt(THR.value, 2);
+  const d = document.getElementById('thr-desc');
+  const narr = document.getElementById('thr-narrative');
+  if(THR.value <= 0.45){
+    d.textContent = 'Umbral permisivo. Más cánceres detectados, más biopsias innecesarias.';
+    narr.textContent = 'Umbral permisivo. Maximizamos detección al coste de biopsias adicionales.';
+  } else if(THR.value < 0.7){
+    d.textContent = 'Umbral intermedio.';
+    narr.textContent = 'Umbral intermedio. Buscamos equilibrio entre detección y biopsias.';
+  } else {
+    d.textContent = 'Umbral conservador. Menos biopsias, riesgo de falsos negativos.';
+    narr.textContent = 'Umbral conservador. Minimizamos biopsias al coste de cánceres no detectados.';
+  }
+}
+function setupThreshold(){
+  const slider = document.getElementById('thr-slider');
+  let throttle = null;
+  slider.addEventListener('input', () => {
+    THR.value = parseFloat(slider.value);
+    if(throttle) return;
+    throttle = setTimeout(()=>{ updateThrUI(); throttle = null; }, 50);
+  });
+  document.querySelectorAll('#thr-model-switch button').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('#thr-model-switch button').forEach(x=>x.classList.remove('active'));
+      b.classList.add('active');
+      THR.model = b.dataset.model;
+      updateThrUI();
+    });
+  });
+  updateThrUI();
+}
+
+// ===================== COMPARATIVA =====================
+const COMP_ROWS = [
+  {key:'logreg', name:'LogReg',       tstar:0.63, P:'0,525 [0,508–0,543]', R:'0,639 [0,616–0,663]', F1:'0,577 [0,558–0,594]', AUC:'0,846 [0,836–0,857]', hl:true,
+   badge:{text:'DESPLEGABLE', bg:'#DCFCE7', fg:'#15803D'}},
+  {key:'xgb',    name:'XGBoost',      tstar:0.60, P:'0,523 [0,505–0,541]', R:'0,646 [0,621–0,669]', F1:'0,578 [0,559–0,596]', AUC:'0,847 [0,837–0,858]', hl:true,
+   badge:{text:'EMPATE TÉCNICO', bg:'#EFF2F9', fg:'#1E3A8A'}},
+  {key:'rf',     name:'RandomForest', tstar:0.55, P:'0,515 [0,498–0,534]', R:'0,641 [0,616–0,664]', F1:'0,571 [0,553–0,589]', AUC:'0,843 [0,832–0,854]',
+   badge:{text:'COMPETITIVO', bg:'#F4F4EF', fg:'#5C5C5C'}},
+  {key:'lgbm',   name:'LightGBM',     tstar:0.58, P:'0,523 [0,504–0,543]', R:'0,617 [0,591–0,641]', F1:'0,566 [0,546–0,584]', AUC:'0,840 [0,830–0,851]',
+   badge:{text:'OVERFIT MODERADO', bg:'#FEF3C7', fg:'#C2410C'}},
+  {key:'mlp',    name:'MLP (224-128-64)', tstar:0.60, P:'0,496 [0,478–0,514]', R:'0,623 [0,599–0,647]', F1:'0,552 [0,535–0,569]', AUC:'0,821 [0,809–0,834]',
+   badge:{text:'SIN MEJORA', bg:'#F4F4EF', fg:'#5C5C5C'}},
+];
+const COMP_COLORS = { logreg:'#1E3A8A', xgb:'#047857', rf:'#B45309', lgbm:'#7C3AED', mlp:'#9F1239' };
+function renderCompareTable(){
+  const tb = document.getElementById('cmp-tbody');
+  tb.innerHTML = COMP_ROWS.map(r => `
+    <tr class="${r.hl?'highlight':''}">
+      <td>
+        <div class="font-medium">${r.name}</div>
+        <span style="display:inline-block; padding:2px 8px; border-radius:4px; font-size:10px; font-weight:600; letter-spacing:0.04em; background:${r.badge.bg}; color:${r.badge.fg}; margin-top:4px">${r.badge.text}</span>
+      </td>
+      <td class="font-mono">${fmt(r.tstar,2)}</td>
+      <td class="font-mono">${r.P}</td>
+      <td class="font-mono">${r.R}</td>
+      <td class="font-mono">${r.F1}</td>
+      <td class="font-mono">${r.AUC}</td>
+    </tr>`).join('');
+}
+let CHART_ROC, CHART_PR, CHART_HIST;
+function buildHistogram(){
+  const data = window.TEST_PREDICTIONS.predictions;
+  const nBins = 50;
+  const binSize = 1.0 / nBins;
+  const binsPos = new Array(nBins).fill(0);
+  const binsNeg = new Array(nBins).fill(0);
+  for(const p of data){
+    const b = Math.min(Math.floor(p.p_logreg / binSize), nBins - 1);
+    if(p.y_true === 1) binsPos[b]++;
+    else binsNeg[b]++;
+  }
+  const labels = Array.from({length:nBins}, (_, i) => (i*binSize + binSize/2).toFixed(2).replace('.', ','));
+
+  CHART_HIST = new Chart(document.getElementById('chart-hist'), {
+    type:'bar',
+    data:{
+      labels,
+      datasets:[
+        {label:'Pacientes sin cáncer (n=6.054)', data:binsNeg,
+         backgroundColor:'#D4D4CE', borderColor:'#A3A39A', borderWidth:0.5, stack:'s1'},
+        {label:'Pacientes con cáncer (n=1.447)', data:binsPos,
+         backgroundColor:'rgba(30,58,138,0.72)', borderColor:'#1E3A8A', borderWidth:0.5, stack:'s2'},
+      ],
+    },
+    options:{
+      animation:{duration:600},
+      responsive:true, maintainAspectRatio:false,
+      scales:{
+        x:{title:{display:true, text:'Probabilidad predicha P(cáncer)'},
+           grid:{display:false}, ticks:{maxRotation:0, autoSkip:true, maxTicksLimit:11}},
+        y:{type:'logarithmic', title:{display:true, text:'Nº pacientes (log)'},
+           grid:{color:'#E5E5E0'}, min:1},
+      },
+      plugins:{
+        legend:{position:'top', align:'start', labels:{boxWidth:14, font:{size:12}}},
+        tooltip:{callbacks:{title:items=>'P ≈ '+items[0].label,
+          label:c=>`${c.dataset.label}: ${c.parsed.y}`}},
+        annotation: undefined,
+      },
+    },
+    plugins:[{
+      id:'thresholdLines',
+      afterDraw(chart){
+        const xScale = chart.scales.x;
+        const yScale = chart.scales.y;
+        const ctx = chart.ctx;
+        const drawLine = (xVal, color, label) => {
+          const idx = Math.round(xVal / binSize);
+          const x = xScale.getPixelForValue(idx);
+          ctx.save();
+          ctx.strokeStyle = color; ctx.lineWidth = 1.5;
+          ctx.setLineDash([4,4]);
+          ctx.beginPath();
+          ctx.moveTo(x, yScale.top); ctx.lineTo(x, yScale.bottom);
+          ctx.stroke();
+          ctx.fillStyle = color; ctx.font='500 11px Inter,sans-serif';
+          ctx.fillText(label, x + 4, yScale.top + 12);
+          ctx.restore();
+        };
+        drawLine(0.38, '#15803D', '◀ Clínico 0,38');
+        drawLine(0.63, '#C2410C', '◀ F1-óptimo 0,63');
+      }
+    }]
+  });
+}
+
+function buildCharts(){
+  const cv = window.ROC_CURVES;
+  const dsROC = COMP_ROWS.map(r => ({
+    label: `${r.name} (AUC=${fmt(cv[r.key].auc, 3)})`,
+    data: cv[r.key].roc.fpr.map((x,i)=>({x, y:cv[r.key].roc.tpr[i]})),
+    borderColor: COMP_COLORS[r.key], backgroundColor: 'transparent',
+    borderWidth: 2, pointRadius: 0, tension: 0.1,
+    _model: r.key,
+  }));
+  dsROC.push({label:'Azar', data:[{x:0,y:0},{x:1,y:1}], borderColor:'#8C8C8C', borderDash:[4,4], borderWidth:1, pointRadius:0, _model:'_diag'});
+  CHART_ROC = new Chart(document.getElementById('chart-roc'), {
+    type:'line', data:{datasets:dsROC},
+    options:{
+      animation:false, responsive:true, maintainAspectRatio:true,
+      scales:{
+        x:{type:'linear', min:0, max:1, title:{display:true, text:'1 − Especificidad (FPR)'}, grid:{color:'#E5E5E0'}},
+        y:{type:'linear', min:0, max:1, title:{display:true, text:'Sensibilidad (TPR)'}, grid:{color:'#E5E5E0'}}
+      },
+      plugins:{ legend:{position:'bottom', labels:{boxWidth:14, font:{size:11}}},
+        tooltip:{callbacks:{title:items=>items[0].dataset.label,
+          label:c=>`FPR=${c.parsed.x.toFixed(3)}, TPR=${c.parsed.y.toFixed(3)}`}} }
+    }
+  });
+  const dsPR = COMP_ROWS.map(r => ({
+    label: `${r.name} (AUC=${fmt(cv[r.key].auc, 3)})`,
+    data: cv[r.key].pr.recall.map((x,i)=>({x, y:cv[r.key].pr.precision[i]})),
+    borderColor: COMP_COLORS[r.key], backgroundColor: 'transparent',
+    borderWidth: 2, pointRadius: 0, tension: 0.1, _model:r.key,
+  }));
+  dsPR.push({label:'Prevalencia (0,193)', data:[{x:0,y:0.193},{x:1,y:0.193}], borderColor:'#8C8C8C', borderDash:[4,4], borderWidth:1, pointRadius:0, _model:'_base'});
+  CHART_PR = new Chart(document.getElementById('chart-pr'), {
+    type:'line', data:{datasets:dsPR},
+    options:{
+      animation:false, responsive:true, maintainAspectRatio:true,
+      scales:{
+        x:{type:'linear', min:0, max:1, title:{display:true, text:'Sensibilidad (Recall)'}, grid:{color:'#E5E5E0'}},
+        y:{type:'linear', min:0, max:1, title:{display:true, text:'Precision (VPP)'}, grid:{color:'#E5E5E0'}}
+      },
+      plugins:{legend:{position:'bottom', labels:{boxWidth:14, font:{size:11}}}}
+    }
+  });
+}
+function setupHighlight(){
+  document.querySelectorAll('#hl-switch button').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('#hl-switch button').forEach(x=>x.classList.remove('active'));
+      b.classList.add('active');
+      const key = b.dataset.hl;
+      [CHART_ROC, CHART_PR].forEach(ch => {
+        ch.data.datasets.forEach(ds => {
+          if(key === 'all' || ds._model === key || ds._model === '_diag' || ds._model === '_base'){
+            ds.borderColor = (ds._model === '_diag' || ds._model === '_base') ? '#8C8C8C' : COMP_COLORS[ds._model] || ds.borderColor;
+            ds.borderWidth = (ds._model === '_diag' || ds._model === '_base') ? 1 : 2;
+          } else {
+            const c = COMP_COLORS[ds._model] || '#999';
+            ds.borderColor = c + '33';
+            ds.borderWidth = 1;
+          }
+        });
+        ch.update('none');
+      });
+    });
+  });
+}
+
+// ===================== COEFICIENTES =====================
+let COEF_SORT = 'abs';
+function renderCoefs(){
+  let rows = [...window.COEFS.coefficients];
+  if(COEF_SORT === 'pos') rows = rows.filter(r => r.sign === '+');
+  else if(COEF_SORT === 'neg') rows = rows.filter(r => r.sign === '-');
+  rows = rows.slice(0, 15);
+  const maxAbs = Math.max(...rows.map(r => r.abs));
+  const html = `
+    <table style="width:100%">
+      <tbody>
+        ${rows.map(r => `
+          <tr style="border-bottom:1px solid var(--border)">
+            <td class="py-3 pr-4 font-medium" style="font-size:14px; width:38%">${r.feature}</td>
+            <td class="py-3 pr-4 font-mono text-sec" style="font-size:13px; width:14%">${r.coef >= 0 ? '+' : ''}${fmt(r.coef, 4)}</td>
+            <td class="py-3" style="width:48%">
+              <div class="coef-bar">
+                <div class="barwrap"><div class="bar ${r.sign==='+'?'pos':'neg'}" style="width:0%" data-final="${(r.abs/maxAbs*100).toFixed(1)}%"></div></div>
+              </div>
+            </td>
+          </tr>`).join('')}
+      </tbody>
+    </table>`;
+  document.getElementById('coef-table').innerHTML = html;
+  setTimeout(() => {
+    document.querySelectorAll('#coef-table .bar').forEach((b, i) => {
+      setTimeout(() => b.style.width = b.dataset.final, i*40);
+    });
+  }, 50);
+}
+function setupCoefSort(){
+  document.querySelectorAll('#coef-sort button').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('#coef-sort button').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      COEF_SORT = b.dataset.sort;
+      renderCoefs();
+    });
+  });
+}
+
+// ===================== TIMELINE §II =====================
+const PIPELINE_STEPS = [
+  {t:'Carga',         d:'Merge de 6 ficheros CSV por <code>paciente_id</code> → 50.001 filas únicas.', svg:'<rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/>'},
+  {t:'Inventario',    d:'30 features candidatas tras excluir 6 por leakage o ruido.', svg:'<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>'},
+  {t:'EDA',           d:'0 nulos · VIF máx 1,16 · MI distribuida · edad sigue patrón escalón en 55 años.', svg:'<path d="M3 3v18h18"/><polyline points="7 14 11 10 14 13 20 7"/>'},
+  {t:'Split',         d:'70/15/15 estratificado por target · <code>random_state=42</code>.', svg:'<rect x="3" y="3" width="7" height="18" rx="1"/><rect x="14" y="3" width="7" height="8" rx="1"/><rect x="14" y="13" width="7" height="8" rx="1"/>'},
+  {t:'Preprocesado',  d:'StandardScaler en 10 numéricas · OneHot <code>drop="first"</code> en 6 categóricas.', svg:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82A1.65 1.65 0 0 0 3.09 15H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>'},
+  {t:'Modelos',       d:'LogReg L2 · Random Forest · XGBoost · LightGBM · MLP de 47.745 parámetros.', svg:'<circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="12" r="3"/><line x1="9" y1="6" x2="15" y2="11"/><line x1="9" y1="18" x2="15" y2="13"/>'},
+  {t:'Tuning',        d:'5-fold CV estratificado · <code>refit=&quot;f1&quot;</code> · sin <code>early_stopping</code> en CV.', svg:'<line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/>'},
+  {t:'Umbral',        d:'Barrido <code>t∈[0,05; 0,95]</code> sobre validación · congelado por modelo.', svg:'<rect x="3" y="11" width="18" height="3" rx="1.5"/><circle cx="14" cy="12.5" r="3"/>'},
+  {t:'Test',          d:'Bootstrap 1.000 resamples estratificados · IC95 % por percentiles.', svg:'<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>'},
+];
+const ROMAN_MAP = ['I','II','III','IV','V','VI','VII','VIII','IX'];
+
+function renderTimeline(){
+  const row = document.getElementById('timeline-row');
+  if(!row) return;
+  row.innerHTML = PIPELINE_STEPS.map((p, i) => `
+    <article class="timeline-card">
+      <div class="flex items-center gap-3 mb-3">
+        <span class="roman">${ROMAN_MAP[i]}</span>
+        <span style="width:1px; height:18px; background:var(--border)"></span>
+        <span style="color:var(--accent)">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${p.svg}</svg>
+        </span>
+        <span class="arrow">→</span>
+      </div>
+      <h3 style="font-size:20px; font-weight:600">${p.t}</h3>
+      <p class="text-sec mt-2" style="font-size:14px; line-height:1.5">${p.d}</p>
+    </article>`).join('');
+
+  const bar = document.getElementById('timeline-bar');
+  row.addEventListener('scroll', () => {
+    const max = row.scrollWidth - row.clientWidth;
+    const pct = max > 0 ? (row.scrollLeft / max) * 100 : 0;
+    bar.style.width = pct + '%';
+  }, {passive:true});
+}
+
+// ===================== MOSAICO REACTIVO §IV =====================
+function setupMiniMosaic(){
+  const c = document.getElementById('mini-mosaic');
+  if(!c) return;
+  c.innerHTML = '';
+  for(let i=0; i<100; i++){
+    const d = document.createElement('div');
+    d.className = 'mini-cell';
+    c.appendChild(d);
+  }
+}
+function updateMiniMosaic(TP, FP, TN, FN){
+  const c = document.getElementById('mini-mosaic');
+  if(!c) return;
+  const total = TP+FP+TN+FN;
+  // Cuantos cuadrados (de 100) por categoría
+  const counts = {
+    tn: Math.round(TN/total*100),
+    fp: Math.round(FP/total*100),
+    fn: Math.round(FN/total*100),
+    tp: 0
+  };
+  counts.tp = 100 - counts.tn - counts.fp - counts.fn;
+
+  const cells = c.children;
+  let k = 0;
+  const apply = (n, bg, br, label) => {
+    for(let i=0; i<n && k<100; i++, k++){
+      const el = cells[k];
+      el.style.background = bg;
+      el.style.borderColor = br;
+      el.title = `≈ ${Math.round(total/100)} pacientes · ${label}`;
+    }
+  };
+  apply(counts.tn, '#E5E5E0', '#D4D4CE', 'Verdadero negativo (sano)');
+  apply(counts.fp, '#FEF3C7', '#FCD34D', 'Falso positivo (biopsia innecesaria)');
+  apply(counts.fn, '#FECACA', '#FCA5A5', 'Falso negativo (cáncer no detectado)');
+  apply(counts.tp, '#1E3A8A', '#1E3A8A', 'Verdadero positivo (cáncer detectado)');
+
+  // Actualizar leyenda
+  const fmtN = n => n.toLocaleString('es-ES');
+  document.getElementById('leg-tn').textContent = fmtN(TN);
+  document.getElementById('leg-fp').textContent = fmtN(FP);
+  document.getElementById('leg-fn').textContent = fmtN(FN);
+  document.getElementById('leg-tp').textContent = fmtN(TP);
+}
+
+// ===================== DIVISORES DECORATIVOS =====================
+function setupSectionDecors(){
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if(e.isIntersecting){ e.target.classList.add('visible'); obs.unobserve(e.target); }
+    });
+  }, {threshold:0.4});
+  document.querySelectorAll('.section-decor').forEach(el => obs.observe(el));
+}
+
+// ===================== AMBIENTE DEL SIMULADOR (tips + pulse) =====================
+const SIM_TIPS = [
+  "Prueba a activar BRCA1 + fumador para simular un caso de alto riesgo.",
+  "La obesidad y el sedentarismo suman riesgo aunque no haya mutaciones.",
+  "Carga un paciente real del test set para validar el modelo con datos no sintéticos.",
+  "Cambia entre umbral F1-óptimo y clínico para ver el impacto en el diagnóstico.",
+  "Mira el panel «Factores activos» para entender qué pesa más en cada paciente.",
+];
+let SIM_TIP_IDX = 0;
+let SIM_IDLE_TIMER = null;
+let SIM_PULSE_TIMER = null;
+let SIM_TIP_INTERVAL = null;
+
+function nextTip(){
+  SIM_TIP_IDX = (SIM_TIP_IDX + 1) % SIM_TIPS.length;
+  const el = document.getElementById('sim-tip');
+  const txt = document.getElementById('sim-tip-text');
+  if(!el || !txt) return;
+  el.classList.add('fade');
+  setTimeout(() => {
+    txt.textContent = SIM_TIPS[SIM_TIP_IDX];
+    el.classList.remove('fade');
+  }, 250);
+}
+
+function startAmbient(){
+  stopAmbient();
+  const gauge = document.getElementById('gauge-container');
+  if(gauge) gauge.classList.add('pulse');
+  SIM_TIP_INTERVAL = setInterval(nextTip, 7000);
+}
+function stopAmbient(){
+  const gauge = document.getElementById('gauge-container');
+  if(gauge) gauge.classList.remove('pulse');
+  if(SIM_TIP_INTERVAL){ clearInterval(SIM_TIP_INTERVAL); SIM_TIP_INTERVAL = null; }
+}
+function bumpIdle(){
+  stopAmbient();
+  if(SIM_IDLE_TIMER) clearTimeout(SIM_IDLE_TIMER);
+  SIM_IDLE_TIMER = setTimeout(startAmbient, 4000);
+}
+function setupAmbient(){
+  const sim = document.getElementById('simulador');
+  if(!sim) return;
+  ['input','click','change'].forEach(ev =>
+    sim.addEventListener(ev, bumpIdle, true)
+  );
+  // Inicia tras un breve delay para no competir con la carga
+  setTimeout(startAmbient, 4000);
+}
+
+// ===================== TOUR GUIADO =====================
+const TOUR_STEPS = [
+  {sec:'hero', eyebrow:'1 / 7 · Bienvenida', title:'Un caso de uso de IA aplicada a oncología',
+   body:'Estudiamos si 30 variables clínicas pueden anticipar un diagnóstico de cáncer sobre 50.001 pacientes sintéticos.'},
+  {sec:'problema', eyebrow:'2 / 7 · El reto', title:'Dos costes asimétricos',
+   body:'El 19,3 % de pacientes desarrolla cáncer. Un falso negativo cuesta vidas. Un falso positivo cuesta dinero y estrés.'},
+  {sec:'dilema', eyebrow:'3 / 7 · El dilema ético', title:'No buscamos precisión. Buscamos equilibrio.',
+   body:'El umbral del modelo refleja los valores éticos del sistema sanitario. Este proyecto propone 0,38 para priorizar detección.'},
+  {sec:'simulador', eyebrow:'4 / 7 · El simulador', title:'Construye un paciente',
+   body:'El modelo predice riesgo en este navegador, en tiempo real, sin servidor. Prueba a activar BRCA1 y fumador.'},
+  {sec:'threshold', eyebrow:'5 / 7 · El umbral', title:'Mueve la frontera de decisión',
+   body:'Cada posición del slider redefine cuántos cánceres detectamos y cuántas biopsias innecesarias generamos.'},
+  {sec:'comparativa', eyebrow:'6 / 7 · Los modelos', title:'Cinco modelos, un empate técnico',
+   body:'Regresión Logística y XGBoost son estadísticamente indistinguibles. La complejidad no compensa cuando la señal es aditiva.'},
+  {sec:'recomendacion', eyebrow:'7 / 7 · La decisión', title:'Lo más simple, auditable',
+   body:'Recomendamos Regresión Logística L2 en punto operativo clínico: sensibilidad 86,5 %, 2,74 biopsias por cáncer, 39 coeficientes auditables.'},
+];
+let TOUR_INDEX = -1;
+function startTour(){
+  TOUR_INDEX = 0;
+  renderTourStep();
+}
+function endTour(){
+  TOUR_INDEX = -1;
+  document.getElementById('tour-root').innerHTML = '';
+  try{ localStorage.setItem('tour_seen', '1'); }catch(e){}
+}
+function renderTourStep(){
+  if(TOUR_INDEX < 0 || TOUR_INDEX >= TOUR_STEPS.length){ endTour(); return; }
+  const s = TOUR_STEPS[TOUR_INDEX];
+  const sec = document.getElementById(s.sec);
+  if(sec) sec.scrollIntoView({behavior:'smooth', block:'start'});
+  const isLast = TOUR_INDEX === TOUR_STEPS.length - 1;
+  const dots = TOUR_STEPS.map((_, i) => `<span class="${i <= TOUR_INDEX ? 'done':''}"></span>`).join('');
+  document.getElementById('tour-root').innerHTML = `
+    <div class="tour-backdrop" id="tour-backdrop">
+      <div class="tour-card">
+        <div class="eyebrow">${s.eyebrow}</div>
+        <h3>${s.title}</h3>
+        <p>${s.body}</p>
+        <div class="tour-progress">${dots}</div>
+        <div class="flex justify-between items-center mt-7">
+          <button onclick="endTour()" class="text-ter" style="font-size:12px">Cerrar tour</button>
+          <div class="flex gap-2">
+            ${TOUR_INDEX>0?'<button onclick="TOUR_INDEX--; renderTourStep()" class="btn-secondary" style="padding:8px 14px; font-size:13px">← Anterior</button>':''}
+            <button onclick="TOUR_INDEX++; renderTourStep()" class="btn-primary" style="padding:8px 18px; font-size:13px">${isLast?'Finalizar ✓':'Siguiente →'}</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  document.getElementById('tour-backdrop').addEventListener('click', (e)=>{
+    if(e.target.id === 'tour-backdrop') endTour();
+  });
+}
+window.startTour = startTour;
+window.endTour = endTour;
+
+// ===================== BOOT =====================
+async function boot(){
+  setupNav();
+  setupFadeIn();
+  renderPrevalenceMosaicStatic();    // estructura inicial sin animar
+  setupMosaicViewportTrigger();      // dispara animación al entrar al viewport
+  animateKPIs();
+
+  await loadAll();
+  verifyInference();
+
+  renderTimeline();
+  setupMiniMosaic();
+  setupSectionDecors();
+
+  SIM.patient = defaultPatient();
+  setupTabs();
+  renderTab('demo');
+  setupThrSwitch();
+  runInference();
+  document.getElementById('btn-load-real').addEventListener('click', loadRandomPatient);
+  document.getElementById('btn-reset').addEventListener('click', resetPatient);
+
+  setupThreshold();
+  renderCompareTable();
+  buildHistogram();
+  buildCharts();
+  setupHighlight();
+  renderCoefs();
+  setupCoefSort();
+  setupAmbient();
+}
+document.addEventListener('DOMContentLoaded', boot);
+</script>
+
+</body>
+</html>
